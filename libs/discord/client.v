@@ -39,18 +39,18 @@ mut:
 	user_token      bool
 	base_url        string
 pub mut:
-	events           GatewayEvents
-	application      &Class_Application    = unsafe { nil }
-	users            &Class_Users          = unsafe { nil }
-	channels         &Class_Channels       = unsafe { nil }
-	guilds           &Class_Guilds         = unsafe { nil }
-	invites          &Class_Invites        = unsafe { nil }
-	webhooks         &Class_Webhooks       = unsafe { nil }
-	entitlements     &Class_Entitlements   = unsafe { nil }
-	auto_moderation  &Class_AutoModeration = unsafe { nil }
-	emojis           &Class_Emojis         = unsafe { nil }
-	gateway          &Gateway              = unsafe { nil }
-	ws               &websocket.Client     = unsafe { nil }
+	events          GatewayEvents
+	application     &Class_Application    = unsafe { nil }
+	users           &Class_Users          = unsafe { nil }
+	channels        &Class_Channels       = unsafe { nil }
+	guilds          &Class_Guilds         = unsafe { nil }
+	invites         &Class_Invites        = unsafe { nil }
+	webhooks        &Class_Webhooks       = unsafe { nil }
+	entitlements    &Class_Entitlements   = unsafe { nil }
+	auto_moderation &Class_AutoModeration = unsafe { nil }
+	emojis          &Class_Emojis         = unsafe { nil }
+	gateway         &Class_Gateway        = unsafe { nil }
+	ws              &websocket.Client     = unsafe { nil }
 }
 
 pub fn new_class_bot_client() &Class_BotClient {
@@ -519,7 +519,7 @@ fn (mut this Class_BotClient) start_heartbeat_loop() {
 			eprintln('Heartbeat error: ${err}')
 			break
 		}
-		// Poll every 250ms; HeartbeatTracker.heartbeat() only sends once interval_ms has elapsed
+		// Poll every 250ms; Class_HeartbeatTracker.heartbeat() only sends once interval_ms has elapsed
 		time.sleep(250 * time.millisecond)
 	}
 }
