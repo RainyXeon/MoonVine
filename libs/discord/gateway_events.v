@@ -3,6 +3,7 @@ module discord
 // Typed event handlers (add more event fields here anytime as needed)
 pub struct GatewayEvents {
 pub mut:
+	on_heartbeat_ack                          ?fn (i64)
 	on_ready                                  ?fn (ReadyEvent)
 	on_resumed                                ?fn (ResumedEvent)
 	on_rate_limited                           ?fn (RateLimitedEvent)

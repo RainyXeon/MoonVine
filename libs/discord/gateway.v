@@ -93,10 +93,15 @@ pub mut:
 	heartbeat_interval  int
 	heartbeat_tracker   HeartbeatTracker
 	identify_properties GatewayIdentifyProperties
+	listener            &GatewayListener = unsafe { nil }
+}
+
+pub fn (this Gateway) ping() i64 {
+	return this.heartbeat_tracker.latency_ms
 }
 
 pub fn new_gateway(client &Class_BotClient, intents u32) &Gateway {
-	return &Gateway{
+	mut gw := &Gateway{
 		client:              client
 		intents:             intents
 		identify_properties: GatewayIdentifyProperties{
@@ -105,6 +110,8 @@ pub fn new_gateway(client &Class_BotClient, intents u32) &Gateway {
 			device:  'MoonVine'
 		}
 	}
+	gw.listener = new_gateway_listener(gw, none)
+	return gw
 }
 
 pub fn (this &Class_BotClient) fetch_gateway() !GatewayInfo {
@@ -656,7 +663,10 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 			listener.gateway.heartbeat_tracker.mark_sent(time.now().unix_milli())
 		}
 		11 {
-			listener.gateway.heartbeat_tracker.acknowledge()
+			listener.gateway.heartbeat_tracker.acknowledge(time.now().unix_milli())
+			if handler := listener.events.on_heartbeat_ack {
+				handler(listener.gateway.heartbeat_tracker.latency_ms)
+			}
 		}
 		7 {
 			listener.gateway.state = .reconnecting
@@ -746,6 +756,7 @@ pub fn (mut tracker HeartbeatTracker) start(interval_ms int) ! {
 	tracker.interval_ms = interval_ms
 	tracker.last_heartbeat_at = 0
 	tracker.awaiting_ack = false
+	tracker.latency_ms = -1
 }
 
 pub fn (tracker HeartbeatTracker) heartbeat_due(now_ms i64) bool {
@@ -758,7 +769,10 @@ pub fn (mut tracker HeartbeatTracker) mark_sent(now_ms i64) {
 	tracker.awaiting_ack = true
 }
 
-pub fn (mut tracker HeartbeatTracker) acknowledge() {
+pub fn (mut tracker HeartbeatTracker) acknowledge(now_ms i64) {
+	if tracker.last_heartbeat_at > 0 {
+		tracker.latency_ms = now_ms - tracker.last_heartbeat_at
+	}
 	tracker.awaiting_ack = false
 }
 

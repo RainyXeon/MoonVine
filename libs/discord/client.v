@@ -50,7 +50,6 @@ pub mut:
 	auto_moderation  &Class_AutoModeration = unsafe { nil }
 	emojis           &Class_Emojis         = unsafe { nil }
 	gateway          &Gateway              = unsafe { nil }
-	gateway_listener &GatewayListener      = unsafe { nil }
 	ws               &websocket.Client     = unsafe { nil }
 }
 
@@ -92,16 +91,15 @@ pub fn (mut this Class_BotClient) login(token string) !&Class_BotClient {
 	this.user_token = false
 	this.token = token
 	this.gateway = new_gateway(this, this.gateway_intents)
-	this.gateway_listener = new_gateway_listener(this.gateway)
-	this.gateway_listener.events = this.events
+	this.gateway.listener.events = this.events
 
 	info := this.fetch_gateway()!
-	this.ws = this.gateway_listener.connect(info.url)!
+	this.ws = this.gateway.listener.connect(info.url)!
 
 	spawn this.start_heartbeat_loop()
-	this.gateway_listener.listen(mut this.ws)!
+	this.gateway.listener.listen(mut this.ws)!
 
-	if err := this.gateway_listener.last_error {
+	if err := this.gateway.listener.last_error {
 		if err.code != 1000 {
 			return error(err.str())
 		}
@@ -501,6 +499,11 @@ pub fn (mut this Class_BotClient) on_webhooks_update(handler fn (WebhooksUpdateE
 	return this
 }
 
+pub fn (mut this Class_BotClient) on_heartbeat_ack(handler fn (i64)) &Class_BotClient {
+	this.events.on_heartbeat_ack = handler
+	return this
+}
+
 fn (mut this Class_BotClient) start_heartbeat_loop() {
 	// Wait until OP 10 HELLO sets heartbeat_interval
 	for this.gateway.heartbeat_interval <= 0 && this.gateway.state != .closed {
@@ -512,7 +515,7 @@ fn (mut this Class_BotClient) start_heartbeat_loop() {
 	time.sleep(jitter_ms * time.millisecond)
 
 	for this.gateway.state != .closed {
-		this.gateway_listener.heartbeat(mut this.ws, time.now().unix_milli()) or {
+		this.gateway.listener.heartbeat(mut this.ws, time.now().unix_milli()) or {
 			eprintln('Heartbeat error: ${err}')
 			break
 		}

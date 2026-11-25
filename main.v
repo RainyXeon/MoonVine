@@ -19,8 +19,14 @@ pub fn main() {
 
 	client.on_message_create(fn [mut client] (msg discord.Message) {
 		if msg.content == '!ping' {
+			ws_ping := client.gateway.ping()
+			text := if ws_ping >= 0 {
+				'Pong! Gateway latency: ${ws_ping}ms'
+			} else {
+				'Pong! (awaiting first heartbeat ACK)'
+			}
 			client.channels.send_message(msg.channel_id, discord.CreateMessageParams{
-				content: 'Pong!'
+				content: text
 			}) or {}
 		}
 	})
