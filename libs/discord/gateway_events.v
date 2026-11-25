@@ -1,5 +1,88 @@
 module discord
 
+// Typed event handlers (add more event fields here anytime as needed)
+pub struct GatewayEvents {
+pub mut:
+	on_ready                                  ?fn (ReadyEvent)
+	on_resumed                                ?fn (ResumedEvent)
+	on_rate_limited                           ?fn (RateLimitedEvent)
+	on_application_command_permissions_update ?fn (ApplicationCommandPermissionsUpdateEvent)
+	on_auto_moderation_rule_create            ?fn (AutoModerationRule)
+	on_auto_moderation_rule_update            ?fn (AutoModerationRule)
+	on_auto_moderation_rule_delete            ?fn (AutoModerationRule)
+	on_auto_moderation_action_execution       ?fn (AutoModerationActionExecutionEvent)
+	on_channel_create                         ?fn (Channel)
+	on_channel_update                         ?fn (Channel)
+	on_channel_delete                         ?fn (Channel)
+	on_channel_info                           ?fn (ChannelInfoEvent)
+	on_channel_pins_update                    ?fn (ChannelPinsUpdateEvent)
+	on_thread_create                          ?fn (ThreadCreateEvent)
+	on_thread_update                          ?fn (ThreadUpdateEvent)
+	on_thread_delete                          ?fn (ThreadDeleteEvent)
+	on_thread_list_sync                       ?fn (ThreadListSyncEvent)
+	on_thread_member_update                   ?fn (ThreadMemberUpdateEvent)
+	on_thread_members_update                  ?fn (ThreadMembersUpdateEvent)
+	on_entitlement_create                     ?fn (Entitlement)
+	on_entitlement_update                     ?fn (Entitlement)
+	on_entitlement_delete                     ?fn (Entitlement)
+	on_guild_create                           ?fn (GuildCreateEvent)
+	on_guild_update                           ?fn (GuildCreateEvent)
+	on_guild_delete                           ?fn (GuildDeleteEvent)
+	on_guild_audit_log_entry_create           ?fn (GuildAuditLogEntryCreateEvent)
+	on_guild_ban_add                          ?fn (GuildBanEvent)
+	on_guild_ban_remove                       ?fn (GuildBanEvent)
+	on_guild_emojis_update                    ?fn (GuildEmojisUpdateEvent)
+	on_guild_stickers_update                  ?fn (GuildStickersUpdateEvent)
+	on_guild_integrations_update              ?fn (GuildIntegrationsUpdateEvent)
+	on_guild_member_add                       ?fn (GuildMemberAddEvent)
+	on_guild_member_update                    ?fn (GuildMemberUpdateEvent)
+	on_guild_member_remove                    ?fn (GuildMemberRemoveEvent)
+	on_guild_members_chunk                    ?fn (GuildMembersChunkEvent)
+	on_guild_role_create                      ?fn (GuildRoleEvent)
+	on_guild_role_update                      ?fn (GuildRoleEvent)
+	on_guild_role_delete                      ?fn (GuildRoleDeleteEvent)
+	on_guild_scheduled_event_create           ?fn (GuildScheduledEvent)
+	on_guild_scheduled_event_update           ?fn (GuildScheduledEvent)
+	on_guild_scheduled_event_delete           ?fn (GuildScheduledEvent)
+	on_guild_scheduled_event_user_add         ?fn (GuildScheduledEventUserAddEvent)
+	on_guild_scheduled_event_user_remove      ?fn (GuildScheduledEventUserRemoveEvent)
+	on_guild_soundboard_sound_create          ?fn (SoundboardSound)
+	on_guild_soundboard_sound_update          ?fn (SoundboardSound)
+	on_guild_soundboard_sound_delete          ?fn (GuildSoundboardSoundDeleteEvent)
+	on_guild_soundboard_sounds_update         ?fn (SoundboardSoundsUpdateEvent)
+	on_integration_create                     ?fn (IntegrationCreateUpdateEvent)
+	on_integration_update                     ?fn (IntegrationCreateUpdateEvent)
+	on_integration_delete                     ?fn (IntegrationEvent)
+	on_interaction_create                     ?fn (InteractionCreateEvent)
+	on_invite_create                          ?fn (InviteCreateEvent)
+	on_invite_delete                          ?fn (InviteDeleteEvent)
+	on_message_create                         ?fn (Message)
+	on_message_update                         ?fn (Message)
+	on_message_delete                         ?fn (MessageDeleteEvent)
+	on_message_delete_bulk                    ?fn (MessageDeleteBulkEvent)
+	on_message_reaction_add                   ?fn (MessageReactionEvent)
+	on_message_reaction_remove                ?fn (MessageReactionRemoveEvent)
+	on_message_reaction_remove_all            ?fn (MessageReactionRemoveAllEvent)
+	on_message_reaction_remove_emoji          ?fn (MessageReactionRemoveEmojiEvent)
+	on_message_poll_vote_add                  ?fn (MessagePollVoteEvent)
+	on_message_poll_vote_remove               ?fn (MessagePollVoteRemoveEvent)
+	on_presence_update                        ?fn (PresenceUpdateEvent)
+	on_stage_instance_create                  ?fn (StageInstance)
+	on_stage_instance_update                  ?fn (StageInstance)
+	on_stage_instance_delete                  ?fn (StageInstance)
+	on_subscription_create                    ?fn (SubscriptionEvent)
+	on_subscription_update                    ?fn (SubscriptionEvent)
+	on_subscription_delete                    ?fn (SubscriptionEvent)
+	on_typing_start                           ?fn (TypingStartEvent)
+	on_user_update                            ?fn (User)
+	on_voice_channel_effect_send              ?fn (VoiceChannelEffectSendEvent)
+	on_voice_state_update                     ?fn (VoiceStateEvent)
+	on_voice_server_update                    ?fn (VoiceServerEvent)
+	on_webhooks_update                        ?fn (WebhooksUpdateEvent)
+	on_error                                  ?GatewayErrorHandler
+	on_raw_dispatch                           ?GatewayDispatchHandler
+}
+
 pub struct HelloEvent {
 pub:
 	heartbeat_interval int
@@ -694,4 +777,52 @@ pub:
 
 pub struct GuildUpdateEvent {
 	guild GuildCreateEvent
+}
+
+pub struct RateLimitedEvent {
+pub:
+	opcode      int
+	retry_after f64
+	meta        RateLimitMeta
+}
+
+pub struct RateLimitMeta {
+pub:
+	guild_id ?string
+	nonce    ?string
+}
+
+pub struct ChannelInfoEvent {
+pub:
+	guild_id string
+	channels []ChannelInfoItem
+}
+
+pub struct ChannelInfoItem {
+pub:
+	id            string
+	status        ?string
+	speaker_ids   ?[]string
+	audience_size ?int
+}
+
+pub struct IntegrationCreateUpdateEvent {
+pub:
+	id                  string
+	name                string
+	integration_type    string @[json: 'type']
+	enabled             bool
+	syncing             ?bool
+	role_id             ?string
+	enable_emoticons    ?bool
+	expire_behavior     ?int
+	expire_grace_period ?int
+	user                ?User
+	account             IntegrationAccount
+	synced_at           ?string
+	subscriber_count    ?int
+	revoked             ?bool
+	application         ?IntegrationApplication
+	scopes              ?[]string
+	guild_id            string
 }

@@ -179,32 +179,6 @@ pub fn gateway_heartbeat_interval(raw string) !int {
 pub type GatewayDispatchHandler = fn (GatewayDispatch) !
 pub type GatewayErrorHandler = fn (GatewayError)
 
-// Typed event handlers (add more event fields here anytime as needed)
-pub struct GatewayEvents {
-pub mut:
-	on_ready                   ?fn (ReadyEvent)
-	on_resumed                 ?fn (ResumedEvent)
-	on_message_create          ?fn (Message)
-	on_message_update          ?fn (Message)
-	on_message_delete          ?fn (MessageDeleteEvent)
-	on_message_delete_bulk     ?fn (MessageDeleteBulkEvent)
-	on_message_reaction_add    ?fn (MessageReactionEvent)
-	on_message_reaction_remove ?fn (MessageReactionRemoveEvent)
-	on_interaction_create      ?fn (InteractionCreateEvent)
-	on_guild_create            ?fn (GuildCreateEvent)
-	on_guild_update            ?fn (GuildCreateEvent)
-	on_guild_delete            ?fn (GuildDeleteEvent)
-	on_guild_member_add        ?fn (GuildMemberAddEvent)
-	on_guild_member_update     ?fn (GuildMemberUpdateEvent)
-	on_guild_member_remove     ?fn (GuildMemberRemoveEvent)
-	on_voice_state_update      ?fn (VoiceStateEvent)
-	on_voice_server_update     ?fn (VoiceServerEvent)
-	on_presence_update         ?fn (PresenceUpdateEvent)
-	on_typing_start            ?fn (TypingStartEvent)
-	on_error                   ?GatewayErrorHandler
-	on_raw_dispatch            ?GatewayDispatchHandler
-}
-
 @[heap]
 pub struct GatewayListener {
 pub mut:
@@ -249,6 +223,261 @@ fn (mut listener GatewayListener) emit_dispatch(dispatch GatewayDispatch) ! {
 				handler(resumed)
 			}
 		}
+		'RATE_LIMITED' {
+			if handler := listener.events.on_rate_limited {
+				handler(dispatch.decode[RateLimitedEvent]()!)
+			}
+		}
+		'APPLICATION_COMMAND_PERMISSIONS_UPDATE' {
+			if handler := listener.events.on_application_command_permissions_update {
+				handler(dispatch.decode[ApplicationCommandPermissionsUpdateEvent]()!)
+			}
+		}
+		'AUTO_MODERATION_RULE_CREATE' {
+			if handler := listener.events.on_auto_moderation_rule_create {
+				handler(dispatch.decode[AutoModerationRule]()!)
+			}
+		}
+		'AUTO_MODERATION_RULE_UPDATE' {
+			if handler := listener.events.on_auto_moderation_rule_update {
+				handler(dispatch.decode[AutoModerationRule]()!)
+			}
+		}
+		'AUTO_MODERATION_RULE_DELETE' {
+			if handler := listener.events.on_auto_moderation_rule_delete {
+				handler(dispatch.decode[AutoModerationRule]()!)
+			}
+		}
+		'AUTO_MODERATION_ACTION_EXECUTION' {
+			if handler := listener.events.on_auto_moderation_action_execution {
+				handler(dispatch.decode[AutoModerationActionExecutionEvent]()!)
+			}
+		}
+		'CHANNEL_CREATE' {
+			if handler := listener.events.on_channel_create {
+				handler(dispatch.decode[Channel]()!)
+			}
+		}
+		'CHANNEL_UPDATE' {
+			if handler := listener.events.on_channel_update {
+				handler(dispatch.decode[Channel]()!)
+			}
+		}
+		'CHANNEL_DELETE' {
+			if handler := listener.events.on_channel_delete {
+				handler(dispatch.decode[Channel]()!)
+			}
+		}
+		'CHANNEL_INFO' {
+			if handler := listener.events.on_channel_info {
+				handler(dispatch.decode[ChannelInfoEvent]()!)
+			}
+		}
+		'CHANNEL_PINS_UPDATE' {
+			if handler := listener.events.on_channel_pins_update {
+				handler(dispatch.decode[ChannelPinsUpdateEvent]()!)
+			}
+		}
+		'THREAD_CREATE' {
+			if handler := listener.events.on_thread_create {
+				handler(dispatch.decode[ThreadCreateEvent]()!)
+			}
+		}
+		'THREAD_UPDATE' {
+			if handler := listener.events.on_thread_update {
+				handler(dispatch.decode[ThreadUpdateEvent]()!)
+			}
+		}
+		'THREAD_DELETE' {
+			if handler := listener.events.on_thread_delete {
+				handler(dispatch.decode[ThreadDeleteEvent]()!)
+			}
+		}
+		'THREAD_LIST_SYNC' {
+			if handler := listener.events.on_thread_list_sync {
+				handler(dispatch.decode[ThreadListSyncEvent]()!)
+			}
+		}
+		'THREAD_MEMBER_UPDATE' {
+			if handler := listener.events.on_thread_member_update {
+				handler(dispatch.decode[ThreadMemberUpdateEvent]()!)
+			}
+		}
+		'THREAD_MEMBERS_UPDATE' {
+			if handler := listener.events.on_thread_members_update {
+				handler(dispatch.decode[ThreadMembersUpdateEvent]()!)
+			}
+		}
+		'ENTITLEMENT_CREATE' {
+			if handler := listener.events.on_entitlement_create {
+				handler(dispatch.decode[Entitlement]()!)
+			}
+		}
+		'ENTITLEMENT_UPDATE' {
+			if handler := listener.events.on_entitlement_update {
+				handler(dispatch.decode[Entitlement]()!)
+			}
+		}
+		'ENTITLEMENT_DELETE' {
+			if handler := listener.events.on_entitlement_delete {
+				handler(dispatch.decode[Entitlement]()!)
+			}
+		}
+		'GUILD_CREATE' {
+			if handler := listener.events.on_guild_create {
+				handler(dispatch.decode[GuildCreateEvent]()!)
+			}
+		}
+		'GUILD_UPDATE' {
+			if handler := listener.events.on_guild_update {
+				handler(dispatch.decode[GuildCreateEvent]()!)
+			}
+		}
+		'GUILD_DELETE' {
+			if handler := listener.events.on_guild_delete {
+				handler(dispatch.decode[GuildDeleteEvent]()!)
+			}
+		}
+		'GUILD_AUDIT_LOG_ENTRY_CREATE' {
+			if handler := listener.events.on_guild_audit_log_entry_create {
+				handler(dispatch.decode[GuildAuditLogEntryCreateEvent]()!)
+			}
+		}
+		'GUILD_BAN_ADD' {
+			if handler := listener.events.on_guild_ban_add {
+				handler(dispatch.decode[GuildBanEvent]()!)
+			}
+		}
+		'GUILD_BAN_REMOVE' {
+			if handler := listener.events.on_guild_ban_remove {
+				handler(dispatch.decode[GuildBanEvent]()!)
+			}
+		}
+		'GUILD_EMOJIS_UPDATE' {
+			if handler := listener.events.on_guild_emojis_update {
+				handler(dispatch.decode[GuildEmojisUpdateEvent]()!)
+			}
+		}
+		'GUILD_STICKERS_UPDATE' {
+			if handler := listener.events.on_guild_stickers_update {
+				handler(dispatch.decode[GuildStickersUpdateEvent]()!)
+			}
+		}
+		'GUILD_INTEGRATIONS_UPDATE' {
+			if handler := listener.events.on_guild_integrations_update {
+				handler(dispatch.decode[GuildIntegrationsUpdateEvent]()!)
+			}
+		}
+		'GUILD_MEMBER_ADD' {
+			if handler := listener.events.on_guild_member_add {
+				handler(dispatch.decode[GuildMemberAddEvent]()!)
+			}
+		}
+		'GUILD_MEMBER_UPDATE' {
+			if handler := listener.events.on_guild_member_update {
+				handler(dispatch.decode[GuildMemberUpdateEvent]()!)
+			}
+		}
+		'GUILD_MEMBER_REMOVE' {
+			if handler := listener.events.on_guild_member_remove {
+				handler(dispatch.decode[GuildMemberRemoveEvent]()!)
+			}
+		}
+		'GUILD_MEMBERS_CHUNK' {
+			if handler := listener.events.on_guild_members_chunk {
+				handler(dispatch.decode[GuildMembersChunkEvent]()!)
+			}
+		}
+		'GUILD_ROLE_CREATE' {
+			if handler := listener.events.on_guild_role_create {
+				handler(dispatch.decode[GuildRoleEvent]()!)
+			}
+		}
+		'GUILD_ROLE_UPDATE' {
+			if handler := listener.events.on_guild_role_update {
+				handler(dispatch.decode[GuildRoleEvent]()!)
+			}
+		}
+		'GUILD_ROLE_DELETE' {
+			if handler := listener.events.on_guild_role_delete {
+				handler(dispatch.decode[GuildRoleDeleteEvent]()!)
+			}
+		}
+		'GUILD_SCHEDULED_EVENT_CREATE' {
+			if handler := listener.events.on_guild_scheduled_event_create {
+				handler(dispatch.decode[GuildScheduledEvent]()!)
+			}
+		}
+		'GUILD_SCHEDULED_EVENT_UPDATE' {
+			if handler := listener.events.on_guild_scheduled_event_update {
+				handler(dispatch.decode[GuildScheduledEvent]()!)
+			}
+		}
+		'GUILD_SCHEDULED_EVENT_DELETE' {
+			if handler := listener.events.on_guild_scheduled_event_delete {
+				handler(dispatch.decode[GuildScheduledEvent]()!)
+			}
+		}
+		'GUILD_SCHEDULED_EVENT_USER_ADD' {
+			if handler := listener.events.on_guild_scheduled_event_user_add {
+				handler(dispatch.decode[GuildScheduledEventUserAddEvent]()!)
+			}
+		}
+		'GUILD_SCHEDULED_EVENT_USER_REMOVE' {
+			if handler := listener.events.on_guild_scheduled_event_user_remove {
+				handler(dispatch.decode[GuildScheduledEventUserRemoveEvent]()!)
+			}
+		}
+		'GUILD_SOUNDBOARD_SOUND_CREATE' {
+			if handler := listener.events.on_guild_soundboard_sound_create {
+				handler(dispatch.decode[SoundboardSound]()!)
+			}
+		}
+		'GUILD_SOUNDBOARD_SOUND_UPDATE' {
+			if handler := listener.events.on_guild_soundboard_sound_update {
+				handler(dispatch.decode[SoundboardSound]()!)
+			}
+		}
+		'GUILD_SOUNDBOARD_SOUND_DELETE' {
+			if handler := listener.events.on_guild_soundboard_sound_delete {
+				handler(dispatch.decode[GuildSoundboardSoundDeleteEvent]()!)
+			}
+		}
+		'GUILD_SOUNDBOARD_SOUNDS_UPDATE', 'SOUNDBOARD_SOUNDS_UPDATE' {
+			if handler := listener.events.on_guild_soundboard_sounds_update {
+				handler(dispatch.decode[SoundboardSoundsUpdateEvent]()!)
+			}
+		}
+		'INTEGRATION_CREATE' {
+			if handler := listener.events.on_integration_create {
+				handler(dispatch.decode[IntegrationCreateUpdateEvent]()!)
+			}
+		}
+		'INTEGRATION_UPDATE' {
+			if handler := listener.events.on_integration_update {
+				handler(dispatch.decode[IntegrationCreateUpdateEvent]()!)
+			}
+		}
+		'INTEGRATION_DELETE' {
+			if handler := listener.events.on_integration_delete {
+				handler(dispatch.decode[IntegrationEvent]()!)
+			}
+		}
+		'INTERACTION_CREATE' {
+			if handler := listener.events.on_interaction_create {
+				handler(dispatch.decode[InteractionCreateEvent]()!)
+			}
+		}
+		'INVITE_CREATE' {
+			if handler := listener.events.on_invite_create {
+				handler(dispatch.decode[InviteCreateEvent]()!)
+			}
+		}
+		'INVITE_DELETE' {
+			if handler := listener.events.on_invite_delete {
+				handler(dispatch.decode[InviteDeleteEvent]()!)
+			}
+		}
 		'MESSAGE_CREATE' {
 			if handler := listener.events.on_message_create {
 				handler(dispatch.decode[Message]()!)
@@ -279,39 +508,74 @@ fn (mut listener GatewayListener) emit_dispatch(dispatch GatewayDispatch) ! {
 				handler(dispatch.decode[MessageReactionRemoveEvent]()!)
 			}
 		}
-		'INTERACTION_CREATE' {
-			if handler := listener.events.on_interaction_create {
-				handler(dispatch.decode[InteractionCreateEvent]()!)
+		'MESSAGE_REACTION_REMOVE_ALL' {
+			if handler := listener.events.on_message_reaction_remove_all {
+				handler(dispatch.decode[MessageReactionRemoveAllEvent]()!)
 			}
 		}
-		'GUILD_CREATE' {
-			if handler := listener.events.on_guild_create {
-				handler(dispatch.decode[GuildCreateEvent]()!)
+		'MESSAGE_REACTION_REMOVE_EMOJI' {
+			if handler := listener.events.on_message_reaction_remove_emoji {
+				handler(dispatch.decode[MessageReactionRemoveEmojiEvent]()!)
 			}
 		}
-		'GUILD_UPDATE' {
-			if handler := listener.events.on_guild_update {
-				handler(dispatch.decode[GuildCreateEvent]()!)
+		'MESSAGE_POLL_VOTE_ADD' {
+			if handler := listener.events.on_message_poll_vote_add {
+				handler(dispatch.decode[MessagePollVoteEvent]()!)
 			}
 		}
-		'GUILD_DELETE' {
-			if handler := listener.events.on_guild_delete {
-				handler(dispatch.decode[GuildDeleteEvent]()!)
+		'MESSAGE_POLL_VOTE_REMOVE' {
+			if handler := listener.events.on_message_poll_vote_remove {
+				handler(dispatch.decode[MessagePollVoteRemoveEvent]()!)
 			}
 		}
-		'GUILD_MEMBER_ADD' {
-			if handler := listener.events.on_guild_member_add {
-				handler(dispatch.decode[GuildMemberAddEvent]()!)
+		'PRESENCE_UPDATE' {
+			if handler := listener.events.on_presence_update {
+				handler(dispatch.decode[PresenceUpdateEvent]()!)
 			}
 		}
-		'GUILD_MEMBER_UPDATE' {
-			if handler := listener.events.on_guild_member_update {
-				handler(dispatch.decode[GuildMemberUpdateEvent]()!)
+		'STAGE_INSTANCE_CREATE' {
+			if handler := listener.events.on_stage_instance_create {
+				handler(dispatch.decode[StageInstance]()!)
 			}
 		}
-		'GUILD_MEMBER_REMOVE' {
-			if handler := listener.events.on_guild_member_remove {
-				handler(dispatch.decode[GuildMemberRemoveEvent]()!)
+		'STAGE_INSTANCE_UPDATE' {
+			if handler := listener.events.on_stage_instance_update {
+				handler(dispatch.decode[StageInstance]()!)
+			}
+		}
+		'STAGE_INSTANCE_DELETE' {
+			if handler := listener.events.on_stage_instance_delete {
+				handler(dispatch.decode[StageInstance]()!)
+			}
+		}
+		'SUBSCRIPTION_CREATE' {
+			if handler := listener.events.on_subscription_create {
+				handler(dispatch.decode[SubscriptionEvent]()!)
+			}
+		}
+		'SUBSCRIPTION_UPDATE' {
+			if handler := listener.events.on_subscription_update {
+				handler(dispatch.decode[SubscriptionEvent]()!)
+			}
+		}
+		'SUBSCRIPTION_DELETE' {
+			if handler := listener.events.on_subscription_delete {
+				handler(dispatch.decode[SubscriptionEvent]()!)
+			}
+		}
+		'TYPING_START' {
+			if handler := listener.events.on_typing_start {
+				handler(dispatch.decode[TypingStartEvent]()!)
+			}
+		}
+		'USER_UPDATE' {
+			if handler := listener.events.on_user_update {
+				handler(dispatch.decode[User]()!)
+			}
+		}
+		'VOICE_CHANNEL_EFFECT_SEND' {
+			if handler := listener.events.on_voice_channel_effect_send {
+				handler(dispatch.decode[VoiceChannelEffectSendEvent]()!)
 			}
 		}
 		'VOICE_STATE_UPDATE' {
@@ -324,14 +588,9 @@ fn (mut listener GatewayListener) emit_dispatch(dispatch GatewayDispatch) ! {
 				handler(dispatch.decode[VoiceServerEvent]()!)
 			}
 		}
-		'PRESENCE_UPDATE' {
-			if handler := listener.events.on_presence_update {
-				handler(dispatch.decode[PresenceUpdateEvent]()!)
-			}
-		}
-		'TYPING_START' {
-			if handler := listener.events.on_typing_start {
-				handler(dispatch.decode[TypingStartEvent]()!)
+		'WEBHOOKS_UPDATE' {
+			if handler := listener.events.on_webhooks_update {
+				handler(dispatch.decode[WebhooksUpdateEvent]()!)
 			}
 		}
 		else {}
@@ -477,6 +736,7 @@ pub mut:
 	interval_ms       int
 	last_heartbeat_at i64
 	awaiting_ack      bool
+	latency_ms        i64 = -1 // -1 until first OP 11 ACK is received
 }
 
 pub fn (mut tracker HeartbeatTracker) start(interval_ms int) ! {
