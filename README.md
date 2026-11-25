@@ -8,7 +8,23 @@ THIS DISCORD MUSIC BOT IS UNDER VERY HEAVY DEVELOPMENT!!
 
 - V-Lang Compiler, see <https://vlang.io/>
 
-## LICENSE
+## Todo
 
-All code except `libs` folder is licensed under AGPL-3.0. 
-All codes in `libs` folder is licensed under LGPL-3.0.
+### Experimental parse
+
+- [ ] Discord Internal SDK
+- [ ] Simple working bot
+- More and more...
+
+### 0.x
+
+Comming soon after finish the library
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](./LICENSE) file for details.
+
+### Sub-Libraries & Modules
+The `libs/` directory contains standalone libraries, each governed by its own respective license located within its directory:
+
+- `libs/discord/` — See [libs/discord/LICENSE](./libs/discord/LICENSE)

@@ -1,22 +1,70 @@
 module discord
 
+module discord
+
 import net.http
+import net.websocket
+import rand
+import time
+import x.json2
+
+pub struct LobbyMemberInput {
+pub mut:
+	id       string
+	metadata ?map[string]string
+	flags    ?int // e.g., 1 << 0 (CAN_LINK_LOBBY)
+}
+
+pub struct CreateLobbyParams {
+pub mut:
+	metadata             ?map[string]string
+	members              ?[]LobbyMemberInput
+	idle_timeout_seconds ?int // 5 to 604800 seconds (7 days)
+}
+
+pub struct ModifyLobbyParams {
+pub mut:
+	metadata             ?map[string]string
+	members              ?[]LobbyMemberInput
+	idle_timeout_seconds ?int
+}
 
 @[heap]
 pub struct Class_BotClient {
 	api_base_url string = 'https://discord.com/api'
 	api_version  string = '10'
 mut:
-	token string
+	token           string
+	gateway_intents u32 = GatewayIntent.default_non_privileged()
+	user_token      bool
+	base_url        string
 pub mut:
-	application &Class_Application = unsafe { nil }
-	users       &Class_Users       = unsafe { nil }
+	events           GatewayEvents
+	application      &Class_Application    = unsafe { nil }
+	users            &Class_Users          = unsafe { nil }
+	channels         &Class_Channels       = unsafe { nil }
+	guilds           &Class_Guilds         = unsafe { nil }
+	invites          &Class_Invites        = unsafe { nil }
+	webhooks         &Class_Webhooks       = unsafe { nil }
+	entitlements     &Class_Entitlements   = unsafe { nil }
+	auto_moderation  &Class_AutoModeration = unsafe { nil }
+	emojis           &Class_Emojis         = unsafe { nil }
+	gateway          &Gateway              = unsafe { nil }
+	gateway_listener &GatewayListener      = unsafe { nil }
+	ws               &websocket.Client     = unsafe { nil }
 }
 
-pub fn new_bot_client() &Class_BotClient {
+pub fn new_class_bot_client() &Class_BotClient {
 	mut bc := &Class_BotClient{}
-	bc.application = new_application(bc)
-	bc.users = new_users(bc)
+	bc.application = new_class_application(bc)
+	bc.users = new_class_users(bc)
+	bc.channels = new_class_channels(bc)
+	bc.guilds = new_class_guilds(bc)
+	bc.invites = new_class_invites(bc)
+	bc.webhooks = new_class_webhooks(bc)
+	bc.entitlements = new_class_entitlements(bc)
+	bc.auto_moderation = new_class_auto_moderation(bc)
+	bc.emojis = new_class_emojis(bc)
 	return bc
 }
 
@@ -24,9 +72,128 @@ pub fn (this Class_BotClient) api_url() string {
 	return '${this.api_base_url}/v${this.api_version}'
 }
 
-pub fn (mut this Class_BotClient) login(token string) &Class_BotClient {
+pub fn (mut this Class_BotClient) login_user(token string) &Class_BotClient {
 	this.token = token
+	this.user_token = true
 	return this
+}
+
+pub fn (mut this Class_BotClient) api_base(url string) &Class_BotClient {
+	this.base_url = url.trim_right('/')
+	return this
+}
+
+pub fn (mut this Class_BotClient) intents(intents u32) &Class_BotClient {
+	this.gateway_intents = intents
+	return this
+}
+
+pub fn (mut this Class_BotClient) login(token string) !&Class_BotClient {
+	this.user_token = false
+	this.token = token
+	this.gateway = new_gateway(this, this.gateway_intents)
+	this.gateway_listener = new_gateway_listener(this.gateway, none)
+	this.gateway_listener.events = this.events
+
+	info := this.fetch_gateway()!
+	this.ws = this.gateway_listener.connect(info.url)!
+
+	spawn this.start_heartbeat_loop()
+	this.gateway_listener.listen(mut this.ws)!
+
+	if err := this.gateway_listener.last_error {
+		if err.code != 1000 {
+			return error(err.str())
+		}
+	}
+
+	return this
+}
+
+// Chainable event helpers on Class_BotClient:
+pub fn (mut this Class_BotClient) on_ready(handler fn (ReadyEvent)) &Class_BotClient {
+	this.events.on_ready = handler
+	return this
+}
+
+pub fn (mut this Class_BotClient) on_message_create(handler fn (Message)) &Class_BotClient {
+	this.events.on_message_create = handler
+	return this
+}
+
+pub fn (mut this Class_BotClient) on_interaction_create(handler fn (InteractionCreateEvent)) &Class_BotClient {
+	this.events.on_interaction_create = handler
+	return this
+}
+
+pub fn (mut this Class_BotClient) on_error(handler GatewayErrorHandler) &Class_BotClient {
+	this.events.on_error = handler
+	return this
+}
+
+fn (mut this Class_BotClient) start_heartbeat_loop() {
+	// Wait until OP 10 HELLO sets heartbeat_interval
+	for this.gateway.heartbeat_interval <= 0 && this.gateway.state != .closed {
+		time.sleep(50 * time.millisecond)
+	}
+
+	// Discord requires initial jitter: interval * random(0.0..1.0)
+	jitter_ms := int(f64(this.gateway.heartbeat_interval) * rand.f64())
+	time.sleep(jitter_ms * time.millisecond)
+
+	for this.gateway.state != .closed {
+		this.gateway_listener.heartbeat(mut this.ws, time.now().unix_milli()) or {
+			eprintln('Heartbeat error: ${err}')
+			break
+		}
+		// Poll every 250ms; HeartbeatTracker.heartbeat() only sends once interval_ms has elapsed
+		time.sleep(250 * time.millisecond)
+	}
+}
+
+// INFO: This is the test code for event system
+fn on_gateway_dispatch(dispatch GatewayDispatch) ! {
+	match dispatch.event {
+		'MESSAGE_CREATE' {
+			message := dispatch.decode[Message]()!
+			println('${message.author.username}: ${message.content}')
+		}
+		'READY' {
+			ready := dispatch.decode[ReadyEvent]()!
+			println('Connected as ${ready.user.username}')
+		}
+		'GUILD_MEMBER_ADD' {
+			member := dispatch.decode[GuildMemberAddEvent]()!
+			println('Member joined guild ${member.guild_id}')
+		}
+		else {
+			println('Received Gateway event: ${dispatch.event}')
+		}
+	}
+}
+
+pub fn (this &Class_BotClient) fetch_lobby(lobby_id string) !Lobby {
+	res := this.raw_request(.get, '/lobbies/${lobby_id}', http.FetchConfig{})!
+	return decode_response[Lobby](res)
+}
+
+pub fn (this &Class_BotClient) create_lobby(data CreateLobbyParams) !Lobby {
+	res := this.raw_request(.post, '/lobbies', http.FetchConfig{
+		data: json2.encode(data)
+	})!
+	return decode_response[Lobby](res)
+}
+
+pub fn (this &Class_BotClient) edit_lobby(lobby_id string, data ModifyLobbyParams) !Lobby {
+	res := this.raw_request(.patch, '/lobbies/${lobby_id}', http.FetchConfig{
+		data: json2.encode(data)
+	})!
+	return decode_response[Lobby](res)
+}
+
+pub fn (this &Class_BotClient) delete_lobby(lobby_id string) ! {
+	res := this.raw_request(.delete, '/lobbies/${lobby_id}', http.FetchConfig{})!
+	check_response(res)!
 }
 
 pub fn (mut this Class_BotClient) raw_request(method http.Method, route string, override_config http.FetchConfig) !http.Response {
@@ -36,10 +203,16 @@ pub fn (mut this Class_BotClient) raw_request(method http.Method, route string, 
 
 	mut header := http.new_header()
 	header.add(.content_type, 'application/json')
-	header.add(.authorization, 'Bot ' + this.token)
+	header.add(.authorization, if auth := override_config.header.get(.authorization) {
+		auth
+	} else if this.user_token {
+		this.token
+	} else {
+		'Bot ' + this.token
+	})
 
 	base_fetch_config := http.FetchConfig{
-		url:    this.api_url() + route
+		url:    if this.base_url != '' { this.base_url + route } else { this.api_url() + route }
 		method: method
 		header: header
 	}

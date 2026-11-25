@@ -9,26 +9,21 @@ pub fn main() {
 		return
 	}
 
-	mut client := discord.new_bot_client().login(config_data.bot.token)
-
-	res1 := client.application.fetch() or {
-		eprintln(err)
-		return
-	}
-
-	println(res1)
-
-	res2 := client.users.fetch('898728768791789628') or {
-		eprintln(err)
-		return
-	}
-
-	println(res2)
-
-	res3 := client.users.me.fetch() or {
-		eprintln(err)
-		return
-	}
-
-	println(res3)
+	mut client := discord.new_class_bot_client()
+	client
+		.intents(discord.GatewayIntent.default_with(.guilds, .guild_messages, .message_content))
+		.on_ready(fn (ready discord.ReadyEvent) {
+			println('Ready as ${ready.user.username}')
+		})
+		.on_message_create(fn [mut client] (msg discord.Message) {
+			if msg.content == '!ping' {
+				client.channels.send_message(msg.channel_id, discord.CreateMessageParams{
+					content: 'Pong!'
+				}) or {}
+			}
+		})
+		.on_error(fn (err discord.GatewayError) {
+			eprintln('[Gateway] ${err}')
+		})
+		.login(config_data.bot.token)!
 }

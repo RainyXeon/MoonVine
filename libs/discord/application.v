@@ -3,7 +3,6 @@ module discord
 import net.http
 import json2
 
-// INFO: Global Struct
 pub struct Application {
 pub:
 	bot_public                        bool
@@ -105,7 +104,88 @@ pub mut:
 	permissions string
 }
 
-// INFO: Route /application
+pub struct ApplicationCommand {
+pub:
+	id                         string
+	command_type               ?int @[json: 'type']
+	application_id             string
+	guild_id                   ?string
+	name                       string
+	name_localizations         ?map[string]string
+	description                string
+	description_localizations  ?map[string]string
+	options                    ?[]ApplicationCommandOption
+	default_member_permissions ?string
+	dm_permission              ?bool
+	default_permission         ?bool
+	nsfw                       ?bool
+	integration_types          ?[]int
+	contexts                   ?[]int
+	version                    string
+	handler                    ?int
+}
+
+pub struct ApplicationCommandOption {
+pub:
+	option_type               int @[json: 'type']
+	name                      string
+	name_localizations        ?map[string]string
+	description               string
+	description_localizations ?map[string]string
+	required                  ?bool
+	choices                   ?[]ApplicationCommandOptionChoice
+	options                   ?[]ApplicationCommandOption
+	channel_types             ?[]int
+	min_value                 ?f64
+	max_value                 ?f64
+	min_length                ?int
+	max_length                ?int
+	autocomplete              ?bool
+}
+
+pub struct ApplicationCommandOptionChoice {
+pub:
+	name               string
+	name_localizations ?map[string]string
+	value              string // Can be string, int, or double in Discord JSON
+}
+
+pub struct ApplicationRoleConnection {
+pub:
+	platform_name     ?string
+	platform_username ?string
+	metadata          map[string]json2.Any
+}
+
+pub struct ApplicationRoleConnectionMetadata {
+pub:
+	id                        string
+	type                      int @[json: 'type']
+	key                       string
+	name                      string
+	description               string
+	name_localizations        ?map[string]string
+	description_localizations ?map[string]string
+}
+
+// ApplicationRoleConnectionMetadataType is the Discord metadata value type.
+pub enum ApplicationRoleConnectionMetadataType {
+	integer  = 1
+	boolean  = 2
+	datetime = 3
+	number   = 4
+}
+
+pub struct EditApplicationRoleConnectionMetadata {
+pub mut:
+	type                      int @[json: 'type']
+	key                       string
+	name                      string
+	description               string
+	name_localizations        ?map[string]string
+	description_localizations ?map[string]string
+}
+
 @[heap]
 pub struct Class_Application {
 mut:
@@ -116,7 +196,7 @@ pub mut:
 	bc &Class_BotClient
 }
 
-pub fn new_application(bc &Class_BotClient) &Class_Application {
+pub fn new_class_application(bc &Class_BotClient) &Class_Application {
 	mut app := &Class_Application{ bc: bc }
 	return app
 }
@@ -126,17 +206,9 @@ pub fn (mut this Class_Application) fetch() !Application {
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
+	json_data := decode_response[Application](res)!
 
-	json_data := json2.decode[Application](res.body) or {
-		return err
-	}
-
-	if this.cached_res == none {
-		this.cached_res = json_data
-	}
+	this.cached_res = json_data
 
 	return json_data
 }
@@ -146,17 +218,9 @@ pub fn (mut this Class_Application) edit(data EditCurrentApplicationParams) !App
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
+	json_data := decode_response[Application](res)!
 
-	json_data := json2.decode[Application](res.body) or {
-		return err
-	}
-
-	if this.cached_res == none {
-		this.cached_res = json_data
-	}
+	this.cached_res = json_data
 
 	return json_data
 }
@@ -174,13 +238,55 @@ pub fn (mut this Class_Application) fetch_activity_instance(instance_id string) 
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
-
-	json_data := json2.decode[ActivityInstance](res.body) or {
-		return err
-	}
+	json_data := decode_response[ActivityInstance](res)!
 
 	return json_data
+}
+
+// fetch_role_connection_metadata retrieves an application's role connection
+// metadata definitions.
+pub fn (this &Class_Application) fetch_role_connection_metadata(application_id string) ![]ApplicationRoleConnectionMetadata {
+	res := this.bc.raw_request(.get, '${this.endpoint}/${application_id}/role-connections/metadata', http.FetchConfig{})!
+	return decode_response_list[ApplicationRoleConnectionMetadata](res)
+}
+
+// edit_role_connection_metadata updates an application's metadata definitions.
+pub fn (this &Class_Application) edit_role_connection_metadata(application_id string, metadata []EditApplicationRoleConnectionMetadata) ![]ApplicationRoleConnectionMetadata {
+	res := this.bc.raw_request(.put, '${this.endpoint}/${application_id}/role-connections/metadata', http.FetchConfig{
+		data: json2.encode(metadata)
+	})!
+	return decode_response_list[ApplicationRoleConnectionMetadata](res)
+}
+
+// fetch_application_role_connection is the endpoint alias on the application
+// resource for application-centric SDK usage.
+pub fn (this &Class_Application) fetch_user_role_connection() !ApplicationRoleConnection {
+	mut user_me := this.bc.users.me
+	application := this.fetch()!
+	return user_me.fetch_application_role_connection(application.id)
+}
+
+pub struct Class_ApplicationIdentityProfile {
+pub mut:
+	users &Class_Users
+}
+
+pub fn new_class_application_identity_profile(users &Class_Users) &Class_ApplicationIdentityProfile {
+	return &Class_ApplicationIdentityProfile{ users: users }
+}
+
+pub fn (this &Class_ApplicationIdentityProfile) fetch() !User {
+	return this.users.me.fetch_identity_profile()
+}
+
+pub fn (this &Class_ApplicationIdentityProfile) fetch_connections() ![]Connection {
+	return this.users.me.fetch_connections()
+}
+
+pub fn (this &Class_ApplicationIdentityProfile) fetch_role_connection(application_id string) !ApplicationRoleConnection {
+	return this.users.me.fetch_application_role_connection(application_id)
+}
+
+pub fn (this &Class_ApplicationIdentityProfile) set_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
+	return this.users.me.set_application_role_connection(application_id, connection)
 }

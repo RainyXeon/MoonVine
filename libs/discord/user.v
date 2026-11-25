@@ -3,7 +3,6 @@ module discord
 import net.http
 import json2
 
-// INFO: Global struct
 pub struct User {
 pub:
 	id                     string
@@ -54,13 +53,27 @@ pub:
 	badge             ?string
 }
 
+pub struct Connection {
+pub:
+	id            string
+	name          string
+	service_type  string @[json: 'type']
+	revoked       ?bool
+	integrations  ?[]Integration
+	verified      bool
+	friend_sync   bool
+	show_activity bool
+	two_way_link  bool
+	visibility    int
+}
+
 pub struct EditUserMeParams {
+pub mut:
 	username ?string
 	avatar   ?ImageData
 	banner   ?ImageData
 }
 
-// INFO: Route /application
 @[heap]
 pub struct Class_Users {
 mut:
@@ -68,16 +81,18 @@ mut:
 pub:
 	endpoint string = '/users'
 pub mut:
-	me Class_Users_Me
-	bc &Class_BotClient
+	me               Class_Users_Me
+	identity_profile &Class_ApplicationIdentityProfile = unsafe { nil }
+	bc               &Class_BotClient
 }
 
-pub fn new_users(bc &Class_BotClient) &Class_Users {
+pub fn new_class_users(bc &Class_BotClient) &Class_Users {
 	mut users := &Class_Users{
 		bc: bc
 		me: Class_Users_Me{}
 	}
 	users.me.users = users
+	users.identity_profile = new_class_application_identity_profile(users)
 	return users
 }
 
@@ -86,13 +101,7 @@ pub fn (mut this Class_Users) fetch(user_id string) !User {
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
-
-	json_data := json2.decode[User](res.body) or {
-		return err
-	}
+	json_data := decode_response[User](res)!
 
 	return json_data
 }
@@ -107,29 +116,70 @@ pub fn (mut this Class_Users_Me) fetch() !User {
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
+	json_data := decode_response[User](res)!
 
-	json_data := json2.decode[User](res.body) or {
+	return json_data
+}
+
+pub fn (mut this Class_Users_Me) fetch_connections() ![]Connection {
+	if !this.users.bc.user_token {
+		return error('USER_OAUTH_TOKEN_REQUIRED')
+	}
+	mut header := http.new_header()
+	header.add(.authorization, this.users.bc.token)
+	res := this.users.bc.raw_request(.get, '${this.users.endpoint}/@me/connections', http.FetchConfig{ header: header }) or {
 		return err
 	}
+
+	json_data := decode_response_list[Connection](res)!
 
 	return json_data
 }
 
 pub fn (mut this Class_Users_Me) edit(data EditUserMeParams) !User {
-	res := this.users.bc.raw_request(.patch, '${this.users.endpoint}/@me', http.FetchConfig{ data: json2.encode(data) }) or {
+	if !this.users.bc.user_token {
+		return error('USER_OAUTH_TOKEN_REQUIRED')
+	}
+	mut header := http.new_header()
+	header.add(.authorization, this.users.bc.token)
+	res := this.users.bc.raw_request(.patch, '${this.users.endpoint}/@me', http.FetchConfig{ header: header, data: json2.encode(data) }) or {
 		return err
 	}
 
-	if api_err := parse_discord_error(res.body) {
-		return error(api_err.pretty())
-	}
-
-	json_data := json2.decode[User](res.body) or {
-		return err
-	}
+	json_data := decode_response[User](res)!
 
 	return json_data
+}
+
+// fetch_application_role_connection retrieves the current user's role connection
+// for an application. This endpoint requires a user OAuth2 token, not a bot token.
+pub fn (this &Class_Users_Me) fetch_application_role_connection(application_id string) !ApplicationRoleConnection {
+	if !this.users.bc.user_token {
+		return error('USER_OAUTH_TOKEN_REQUIRED')
+	}
+	mut header := http.new_header()
+	header.add(.authorization, this.users.bc.token)
+	res := this.users.bc.raw_request(.get, '${this.users.endpoint}/@me/applications/${application_id}/role-connection', http.FetchConfig{ header: header })!
+	return decode_response[ApplicationRoleConnection](res)
+}
+
+// set_application_role_connection sets the current user's role connection for
+// an application. This endpoint requires a user OAuth2 token, not a bot token.
+pub fn (this &Class_Users_Me) set_application_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
+	if !this.users.bc.user_token {
+		return error('USER_OAUTH_TOKEN_REQUIRED')
+	}
+	mut header := http.new_header()
+	header.add(.authorization, this.users.bc.token)
+	res := this.users.bc.raw_request(.put, '${this.users.endpoint}/@me/applications/${application_id}/role-connection', http.FetchConfig{
+		header: header
+		data:   json2.encode(connection)
+	})!
+	return decode_response[ApplicationRoleConnection](res)
+}
+
+// fetch_identity_profile retrieves the authenticated user identity profile.
+// The configured token must be a user OAuth2 access token.
+pub fn (this &Class_Users_Me) fetch_identity_profile() !User {
+	return this.fetch()
 }
