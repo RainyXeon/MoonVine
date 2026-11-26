@@ -3,6 +3,9 @@ module discord
 // Typed event handlers (add more event fields here anytime as needed)
 pub struct GatewayEvents {
 pub mut:
+	on_disconnect                             ?fn (GatewayDisconnectEvent)
+	on_reconnect                              ?fn (GatewayReconnectEvent)
+	on_debug                                  ?fn (GatewayDebugEvent)
 	on_heartbeat_ack                          ?fn (i64)
 	on_ready                                  ?fn (ReadyEvent)
 	on_resumed                                ?fn (ResumedEvent)
@@ -266,6 +269,53 @@ pub:
 	instance       ?bool
 	flags          ?int
 	buttons        ?[]ActivityButton
+}
+
+pub enum PresenceStatus {
+	online
+	dnd
+	idle
+	invisible
+}
+
+pub enum ActivityType {
+	game      = 0
+	streaming = 1
+	listening = 2
+	watching  = 3
+	custom    = 4
+	competing = 5
+}
+
+pub struct PresenceActivity {
+pub mut:
+	name          string
+	activity_type int @[json: 'type']
+	url           ?string
+}
+
+pub fn new_presence_activity(name string, activity_type ActivityType) PresenceActivity {
+	return PresenceActivity{
+		name:          name
+		activity_type: int(activity_type)
+	}
+}
+
+pub struct PresenceUpdateParams {
+pub mut:
+	activities []PresenceActivity
+	status     PresenceStatus = .online
+	since      ?i64
+	afk        bool
+}
+
+pub fn (status PresenceStatus) str() string {
+	return match status {
+		.online { 'online' }
+		.dnd { 'dnd' }
+		.idle { 'idle' }
+		.invisible { 'invisible' }
+	}
 }
 
 pub struct ActivityTimestamps {
@@ -826,4 +876,23 @@ pub:
 	application         ?IntegrationApplication
 	scopes              ?[]string
 	guild_id            string
+}
+
+pub struct GatewayDisconnectEvent {
+pub:
+	code      int
+	reason    string
+	resumable bool
+}
+
+pub struct GatewayReconnectEvent {
+pub:
+	attempt    int
+	resuming   bool
+	session_id string
+}
+
+pub struct GatewayDebugEvent {
+pub:
+	message string
 }

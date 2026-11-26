@@ -93,7 +93,9 @@ pub mut:
 	heartbeat_interval  int
 	heartbeat_tracker   Class_HeartbeatTracker
 	identify_properties GatewayIdentifyProperties
+	last_presence       PresenceUpdateParams
 	listener            &Class_GatewayListener = unsafe { nil }
+	reconnect_attempt   int
 }
 
 pub fn (this Class_Gateway) ping() i64 {
@@ -219,12 +221,16 @@ fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) 
 			listener.gateway.session_id = ready.session_id
 			listener.gateway.resume_gateway_url = ready.resume_gateway_url
 			listener.gateway.state = .ready
+			listener.gateway.reconnect_attempt = 0
+			listener.emit_debug('Session READY (session_id: ${ready.session_id})')
 			if handler := listener.events.on_ready {
 				handler(ready)
 			}
 		}
 		'RESUMED' {
 			listener.gateway.state = .ready
+			listener.gateway.reconnect_attempt = 0
+			listener.emit_debug('Session RESUMED (seq: ${listener.gateway.last_sequence})')
 			if handler := listener.events.on_resumed {
 				resumed := dispatch.decode[ResumedEvent]() or { ResumedEvent{} }
 				handler(resumed)
@@ -637,11 +643,17 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 			}
 			listener.gateway.heartbeat_interval = interval
 			listener.gateway.heartbeat_tracker.start(interval)!
-			listener.gateway.state = if listener.gateway.session_id == '' {
-				.identifying
-			} else {
+			is_resuming := listener.gateway.session_id != ''
+			listener.gateway.state = if is_resuming {
 				.resuming
+			} else {
+				.identifying
 			}
+			listener.emit_debug('Received HELLO (interval: ${interval}ms); sending ${if is_resuming {
+				'OP 6 RESUME'
+			} else {
+				'OP 2 IDENTIFY'
+			}}')
 			identify_or_resume := if listener.gateway.session_id != '' {
 				gateway_resume_payload(listener.gateway.client.token, listener.gateway.session_id,
 					listener.gateway.last_sequence)
@@ -652,6 +664,7 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 			ws.write_string(identify_or_resume)!
 		}
 		1 {
+			listener.emit_debug('Received server-requested heartbeat (OP 1)')
 			if listener.gateway.heartbeat_tracker.awaiting_ack {
 				listener.gateway.state = .reconnecting
 				listener.emit_error(GatewayError{
@@ -664,12 +677,27 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 		}
 		11 {
 			listener.gateway.heartbeat_tracker.acknowledge(time.now().unix_milli())
+			listener.emit_debug('Received Heartbeat ACK (OP 11) — latency: ${listener.gateway.heartbeat_tracker.latency_ms}ms')
 			if handler := listener.events.on_heartbeat_ack {
 				handler(listener.gateway.heartbeat_tracker.latency_ms)
 			}
 		}
+		3 {
+			presence := json2.decode[PresenceUpdateParams](payload.d.json_str()) or {
+				println('a')
+				msg_err := 'Invalid Gateway presence update: ${err}'
+				listener.emit_error(GatewayError{
+					message: msg_err
+				})
+				return error(msg_err)
+			}
+			listener.gateway.last_presence = presence
+			listener.emit_debug('Presence updated (status: ${presence.status.str()}, activities: ${presence.activities.len})')
+		}
 		7 {
 			listener.gateway.state = .reconnecting
+			listener.emit_debug('Received OP 7 Reconnect from Discord')
+			listener.emit_reconnect(listener.gateway.session_id != '')
 			listener.emit_error(GatewayError{
 				message: 'Gateway requested reconnect'
 			})
@@ -681,6 +709,8 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 			if !resumable {
 				listener.gateway.session_id = ''
 			}
+			listener.emit_debug('Received OP 9 Invalid Session (resumable: ${resumable})')
+			listener.emit_reconnect(resumable)
 			msg_err := if resumable {
 				'Gateway invalidated session; reconnect may resume'
 			} else {
@@ -709,6 +739,34 @@ fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, 
 	}
 }
 
+pub fn gateway_presence_payload(presence PresenceUpdateParams) string {
+	since_json := if since := presence.since { '${since}' } else { 'null' }
+	mut activities_json := []string{}
+	for act in presence.activities {
+		url_part := if url := act.url { ',"url":${json2.encode(url)}' } else { '' }
+		activities_json << '{"name":${json2.encode(act.name)},"type":${act.activity_type}${url_part}}'
+	}
+	return '{"op":3,"d":{"since":${since_json},"activities":[${activities_json.join(',')}],"status":"${presence.status.str()}","afk":${presence.afk}}}'
+}
+
+pub fn (mut listener Class_GatewayListener) set_presence(presence PresenceUpdateParams) ! {
+	if listener.gateway.state != .ready {
+		return error('GATEWAY_NOT_READY')
+	}
+	if isnil(listener.gateway.client.ws) || listener.gateway.client.ws.get_state() != .open {
+		return error('GATEWAY_WEBSOCKET_NOT_CONNECTED')
+	}
+	listener.gateway.client.ws.write_string(gateway_presence_payload(presence))!
+	listener.gateway.last_presence = presence
+}
+
+pub fn (mut this Class_BotClient) set_presence(presence PresenceUpdateParams) ! {
+	if isnil(this.gateway) {
+		return error('GATEWAY_NOT_CONNECTED')
+	}
+	this.gateway.listener.set_presence(presence)!
+}
+
 pub fn (mut listener Class_GatewayListener) heartbeat(mut ws websocket.Client, now_ms i64) ! {
 	listener.gateway.heartbeat_tracker.heartbeat(mut ws, listener.gateway.last_sequence, now_ms)!
 }
@@ -718,6 +776,10 @@ pub fn (mut listener Class_GatewayListener) connect(gateway_url string) !&websoc
 		return error('BOT_TOKEN_NOT_FOUND')
 	}
 	url := gateway_url.trim_right('/')
+	listener.emit_debug('Connecting to Gateway: ${url}/?v=10&encoding=json')
+	if listener.gateway.state == .reconnecting {
+		listener.emit_reconnect(listener.gateway.session_id != '')
+	}
 	mut ws := websocket.new_client('${url}/?v=10&encoding=json', websocket.ClientOpt{
 		read_timeout: time.infinite
 	})!
@@ -732,7 +794,37 @@ pub fn (mut listener Class_GatewayListener) connect(gateway_url string) !&websoc
 	}, voidptr(listener))
 	ws.connect()!
 	listener.gateway.state = .awaiting_hello
+	listener.emit_debug('WebSocket connected; awaiting OP 10 HELLO')
 	return ws
+}
+
+fn (mut listener Class_GatewayListener) emit_debug(msg string) {
+	if handler := listener.events.on_debug {
+		handler(GatewayDebugEvent{
+			message: msg
+		})
+	}
+}
+
+fn (mut listener Class_GatewayListener) emit_disconnect(code int, reason string, resumable bool) {
+	if handler := listener.events.on_disconnect {
+		handler(GatewayDisconnectEvent{
+			code:      code
+			reason:    reason
+			resumable: resumable
+		})
+	}
+}
+
+fn (mut listener Class_GatewayListener) emit_reconnect(resuming bool) {
+	listener.gateway.reconnect_attempt++
+	if handler := listener.events.on_reconnect {
+		handler(GatewayReconnectEvent{
+			attempt:    listener.gateway.reconnect_attempt
+			resuming:   resuming
+			session_id: listener.gateway.session_id
+		})
+	}
 }
 
 pub fn (dispatch GatewayDispatch) decode[T]() !T {
@@ -790,14 +882,22 @@ pub fn (mut tracker Class_HeartbeatTracker) heartbeat(mut ws websocket.Client, s
 fn gateway_listener_on_close(mut ws websocket.Client, code int, reason string, ref voidptr) ! {
 	mut listener := unsafe { &Class_GatewayListener(ref) }
 	_ = ws.get_state()
+	// Ignore follow-up 1000 client close frame if a real close/error was already processed
+	if code == 1000 && listener.last_error != none {
+		return
+	}
 	fatal := code in [4004, 4010, 4011, 4012, 4013, 4014]
+	resumable := !fatal && code !in [4007, 4009]
 	listener.gateway.state = if fatal { .closed } else { .reconnecting }
-	if code == 4007 || code == 4009 {
+	if !resumable {
 		listener.gateway.session_id = ''
 	}
+	clean_reason := if reason != '' { reason } else { 'Connection closed' }
+	listener.emit_debug('WebSocket closed (${code}): ${clean_reason} (resumable: ${resumable})')
+	listener.emit_disconnect(code, clean_reason, resumable)
 	listener.emit_error(GatewayError{
 		code:    code
-		message: if reason != '' { reason } else { 'Connection closed' }
+		message: clean_reason
 		fatal:   fatal
 	})
 }

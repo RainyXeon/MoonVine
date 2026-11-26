@@ -8,6 +8,20 @@ THIS DISCORD MUSIC BOT IS UNDER VERY HEAVY DEVELOPMENT!!
 
 - V-Lang Compiler, see <https://vlang.io/>
 
+## How to
+
+### Compile
+
+```sh
+v -prod -cflags "-O3 -march=native -mtune=native" .
+```
+
+### Test run
+
+```sh
+v run .
+```
+
 ## Todo
 
 ### Experimental parse

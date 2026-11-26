@@ -27,3 +27,4 @@ bin/
 # directory per module. Add them here if they should stay out of the repo.
 app.yml
 *.bak
+*.log
