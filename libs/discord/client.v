@@ -1,7 +1,5 @@
 module discord
 
-module discord
-
 import net.http
 import net.websocket
 import rand
@@ -88,93 +86,93 @@ pub fn (mut this Class_BotClient) intents(intents u32) &Class_BotClient {
 }
 
 pub fn (mut this Class_BotClient) login(token string) !&Class_BotClient {
-  this.user_token = false
-  this.token = token
-  this.gateway = new_gateway(this, this.gateway_intents)
-  this.gateway.listener.events = this.events
+	this.user_token = false
+	this.token = token
+	this.gateway = new_gateway(this, this.gateway_intents)
+	this.gateway.listener.events = this.events
 
-  for {
-    this.gateway.listener.last_error = none
-    target_url := if this.gateway.session_id != '' && this.gateway.resume_gateway_url != '' {
-      this.gateway.resume_gateway_url
-    } else {
-      info := this.fetch_gateway() or {
-        this.gateway.state = .reconnecting
-        this.gateway.listener.emit_error(GatewayError{
-          message: 'Failed to fetch gateway: ${err}'
-        })
-        backoff_sec := if this.gateway.reconnect_attempt > 5 {
-          30
-        } else {
-          1 << this.gateway.reconnect_attempt
-        }
-        this.gateway.reconnect_attempt++
-        time.sleep(backoff_sec * time.second)
-        continue
-      }
-      info.url
-    }
+	for {
+		this.gateway.listener.last_error = none
+		target_url := if this.gateway.session_id != '' && this.gateway.resume_gateway_url != '' {
+			this.gateway.resume_gateway_url
+		} else {
+			info := this.fetch_gateway() or {
+				this.gateway.state = .reconnecting
+				this.gateway.listener.emit_error(GatewayError{
+					message: 'Failed to fetch gateway: ${err}'
+				})
+				backoff_sec := if this.gateway.reconnect_attempt > 5 {
+					30
+				} else {
+					1 << this.gateway.reconnect_attempt
+				}
+				this.gateway.reconnect_attempt++
+				time.sleep(backoff_sec * time.second)
+				continue
+			}
+			info.url
+		}
 
-    this.ws = this.gateway.listener.connect(target_url) or {
-      this.gateway.state = .reconnecting
-      this.gateway.listener.emit_error(GatewayError{
-        message: 'Connect failed: ${err}'
-      })
-      backoff_sec := if this.gateway.reconnect_attempt > 5 {
-        30
-      } else {
-        1 << this.gateway.reconnect_attempt
-      }
-      this.gateway.reconnect_attempt++
-      time.sleep(backoff_sec * time.second)
-      continue
-    }
+		this.ws = this.gateway.listener.connect(target_url) or {
+			this.gateway.state = .reconnecting
+			this.gateway.listener.emit_error(GatewayError{
+				message: 'Connect failed: ${err}'
+			})
+			backoff_sec := if this.gateway.reconnect_attempt > 5 {
+				30
+			} else {
+				1 << this.gateway.reconnect_attempt
+			}
+			this.gateway.reconnect_attempt++
+			time.sleep(backoff_sec * time.second)
+			continue
+		}
 
-    spawn this.start_heartbeat_loop()
-    this.gateway.listener.listen(mut this.ws) or {}
+		spawn this.start_heartbeat_loop()
+		this.gateway.listener.listen(mut this.ws) or {}
 
-    if this.gateway.state == .closed {
-      if err := this.gateway.listener.last_error {
-        if err.code != 1000 {
-          return error(err.str())
-        }
-      }
-      break
-    }
+		if this.gateway.state == .closed {
+			if err := this.gateway.listener.last_error {
+				if err.code != 1000 {
+					return error(err.str())
+				}
+			}
+			break
+		}
 
-    backoff_sec := if this.gateway.reconnect_attempt > 5 {
-      30
-    } else {
-      1 << this.gateway.reconnect_attempt
-    }
-    this.gateway.listener.emit_debug('Reconnecting in ${backoff_sec}s...')
-    time.sleep(backoff_sec * time.second)
-  }
+		backoff_sec := if this.gateway.reconnect_attempt > 5 {
+			30
+		} else {
+			1 << this.gateway.reconnect_attempt
+		}
+		this.gateway.listener.emit_debug('Reconnecting in ${backoff_sec}s...')
+		time.sleep(backoff_sec * time.second)
+	}
 
-  return this
+	return this
 }
 
 fn (mut this Class_BotClient) start_heartbeat_loop() {
-  for this.gateway.heartbeat_interval <= 0
-    && this.gateway.state !in [.closed, .reconnecting] {
-    time.sleep(50 * time.millisecond)
-  }
-  if this.gateway.state in [.closed, .reconnecting] {
-    return
-  }
+	for this.gateway.heartbeat_interval <= 0
+		&& this.gateway.state !in [.closed, .reconnecting] {
+		time.sleep(50 * time.millisecond)
+	}
+	if this.gateway.state in [.closed, .reconnecting] {
+		return
+	}
 
-  jitter_ms := int(f64(this.gateway.heartbeat_interval) * rand.f64())
-  time.sleep(jitter_ms * time.millisecond)
+	jitter_ms := int(f64(this.gateway.heartbeat_interval) * rand.f64())
+	time.sleep(jitter_ms * time.millisecond)
 
-  for this.gateway.state !in [.closed, .reconnecting] {
-    this.gateway.listener.heartbeat(mut this.ws, time.now().unix_milli()) or {
-      this.gateway.listener.emit_error(GatewayError{
-        message: 'Heartbeat error: ${err}'
-      })
-      break
-    }
-    time.sleep(250 * time.millisecond)
-  }
+	for this.gateway.state !in [.closed, .reconnecting] {
+		this.gateway.listener.heartbeat(mut this.ws, time.now().unix_milli()) or {
+			this.gateway.listener.emit_error(GatewayError{
+				message: 'Heartbeat error: ${err}'
+			})
+			break
+		}
+		time.sleep(250 * time.millisecond)
+	}
 }
 
 pub fn (this &Class_BotClient) fetch_lobby(lobby_id string) !Lobby {

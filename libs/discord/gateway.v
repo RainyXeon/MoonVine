@@ -108,8 +108,8 @@ pub fn new_gateway(client &Class_BotClient, intents u32) &Class_Gateway {
 		intents:             intents
 		identify_properties: GatewayIdentifyProperties{
 			os:      'linux'
-			browser: "MoonVine_Discord_Internal_SDK"
-			device:  "MoonVine_Discord_Internal_SDK"
+			browser: 'MoonVine_Discord_Internal_SDK'
+			device:  'MoonVine_Discord_Internal_SDK'
 		}
 	}
 	gw.listener = new_gateway_listener(gw, none)
@@ -493,12 +493,16 @@ fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) 
 		}
 		'MESSAGE_CREATE' {
 			if handler := listener.events.on_message_create {
-				handler(dispatch.decode[Message]()!)
+				mut msg := dispatch.decode[Message]()!
+				msg.client = listener.gateway.client
+				handler(msg)
 			}
 		}
 		'MESSAGE_UPDATE' {
 			if handler := listener.events.on_message_update {
-				handler(dispatch.decode[Message]()!)
+				mut msg := dispatch.decode[Message]()!
+				msg.client = listener.gateway.client
+				handler(msg)
 			}
 		}
 		'MESSAGE_DELETE' {

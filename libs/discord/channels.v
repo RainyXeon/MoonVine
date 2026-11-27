@@ -363,23 +363,35 @@ pub fn (this &Class_Channels) fetch(channel_id string) !Channel {
 	return decode_response[Channel](res)
 }
 
+pub fn (this &Class_Channels) fetch_message(channel_id string, message_id string) !Message {
+	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{})!
+	mut msg := decode_response[Message](res)!
+	msg.client = this.bc
+	return msg
+}
+
 pub fn (this &Class_Channels) fetch_messages(channel_id string, params MessageQueryParams) ![]Message {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/messages${params.query()}', http.FetchConfig{})!
-	return decode_response_list[Message](res)
+	mut msgs := decode_response_list[Message](res)!
+	return this.bind_messages(mut msgs)
 }
 
 pub fn (this &Class_Channels) send_message(channel_id string, params CreateMessageParams) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/messages', http.FetchConfig{
 		data: json2.encode(params)
 	})!
-	return decode_response[Message](res)
+	mut msg := decode_response[Message](res)!
+	msg.client = this.bc
+	return msg
 }
 
 pub fn (this &Class_Channels) edit_message(channel_id string, message_id string, params EditMessageParams) !Message {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
-	return decode_response[Message](res)
+	mut msg := decode_response[Message](res)!
+	msg.client = this.bc
+	return msg
 }
 
 pub fn (this &Class_Channels) delete_message(channel_id string, message_id string) ! {
@@ -413,7 +425,16 @@ pub fn (this &Class_Channels) fetch_sticker_packs() ![]StickerPack {
 
 pub fn (this &Class_Channels) expire_poll(channel_id string, message_id string) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/polls/${message_id}/expire', http.FetchConfig{})!
-	return decode_response[Message](res)
+	mut msg := decode_response[Message](res)!
+	msg.client = this.bc
+	return msg
+}
+
+fn (this &Class_Channels) bind_messages(mut msgs []Message) []Message {
+	for mut m in msgs {
+		m.client = this.bc
+	}
+	return msgs
 }
 
 pub fn (this &Class_Channels) fetch_poll_answer_voters(channel_id string, message_id string, answer_id int, after ?string, limit ?int) !PollAnswerVotersResult {
@@ -431,12 +452,9 @@ pub fn (this &Class_Channels) fetch_poll_answer_voters(channel_id string, messag
 
 pub fn (this &Class_Channels) crosspost_message(channel_id string, message_id string) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/messages/${message_id}/crosspost', http.FetchConfig{})!
-	return decode_response[Message](res)
-}
-
-pub fn (this &Class_Channels) fetch_message(channel_id string, message_id string) !Message {
-	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{})!
-	return decode_response[Message](res)
+	mut msg := decode_response[Message](res)!
+	msg.client = this.bc
+	return msg
 }
 
 pub fn (this &Class_Channels) trigger_typing(channel_id string) ! {
@@ -446,7 +464,8 @@ pub fn (this &Class_Channels) trigger_typing(channel_id string) ! {
 
 pub fn (this &Class_Channels) fetch_pins(channel_id string) ![]Message {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/pins', http.FetchConfig{})!
-	return decode_response_list[Message](res)
+	mut msgs := decode_response_list[Message](res)!
+	return this.bind_messages(mut msgs)
 }
 
 pub fn (this &Class_Channels) pin_message(channel_id string, message_id string) ! {
@@ -539,7 +558,8 @@ pub fn (this &Class_Channels) fetch_pinned_messages(channel_id string, before ?s
 	}
 	query := if pairs.len > 0 { '?${pairs.join('&')}' } else { '' }
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/pins${query}', http.FetchConfig{})!
-	return decode_response_list[Message](res)
+	mut msgs := decode_response_list[Message](res)!
+	return this.bind_messages(mut msgs)
 }
 
 pub fn (this &Class_Channels) delete_all_reactions(channel_id string, message_id string) ! {

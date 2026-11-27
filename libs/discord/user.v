@@ -109,6 +109,7 @@ pub fn (mut this Class_Users) fetch(user_id string) !User {
 pub struct Class_Users_Me {
 pub mut:
 	users &Class_Users = unsafe { nil }
+	data  User
 }
 
 pub fn (mut this Class_Users_Me) fetch() !User {

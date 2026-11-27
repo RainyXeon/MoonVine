@@ -8,5 +8,5 @@ pub fn (mut h Class_ClientEventHandler) on_ready(ready discord.ReadyEvent) {
 		activities: [
 			discord.new_presence_activity('ALPHA | /play', discord.ActivityType.listening),
 		]
-	}) or { }
+	}) or {}
 }
