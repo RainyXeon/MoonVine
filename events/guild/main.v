@@ -13,4 +13,5 @@ pub fn register(mut app context.App) {
 	}
 
 	app.client.on_message_create(handler.on_message_create)
+	app.client.on_interaction_create(handler.on_interaction_create)
 }

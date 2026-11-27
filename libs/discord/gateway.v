@@ -478,7 +478,13 @@ fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) 
 		}
 		'INTERACTION_CREATE' {
 			if handler := listener.events.on_interaction_create {
-				handler(dispatch.decode[InteractionCreateEvent]()!)
+				mut interaction := dispatch.decode[InteractionCreateEvent]()!
+				interaction.client = listener.gateway.client
+				if mut msg := interaction.message {
+					msg.client = listener.gateway.client
+					interaction.message = msg
+				}
+				handler(interaction)
 			}
 		}
 		'INVITE_CREATE' {

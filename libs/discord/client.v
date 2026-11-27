@@ -48,6 +48,7 @@ pub mut:
 	auto_moderation &Class_AutoModeration = unsafe { nil }
 	emojis          &Class_Emojis         = unsafe { nil }
 	gateway         &Class_Gateway        = unsafe { nil }
+	interactions    &Class_Interactions   = unsafe { nil }
 	ws              &websocket.Client     = unsafe { nil }
 }
 
@@ -62,6 +63,7 @@ pub fn new_class_bot_client() &Class_BotClient {
 	bc.entitlements = new_class_entitlements(bc)
 	bc.auto_moderation = new_class_auto_moderation(bc)
 	bc.emojis = new_class_emojis(bc)
+	bc.interactions = new_class_interactions(bc)
 	return bc
 }
 

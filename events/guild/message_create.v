@@ -17,7 +17,7 @@ pub fn (mut h Class_GuildEventHandler) on_message_create(msg discord.Message) {
 			return
 		}
 
-		msg.send(discord.CreateMessageParams{
+		msg.reply(discord.CreateMessageParams{
 			content: ''
 			embeds:  [
 				discord.Embed{
