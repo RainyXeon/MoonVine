@@ -108,8 +108,8 @@ pub fn new_gateway(client &Class_BotClient, intents u32) &Class_Gateway {
 		intents:             intents
 		identify_properties: GatewayIdentifyProperties{
 			os:      'linux'
-			browser: 'MoonVine'
-			device:  'MoonVine'
+			browser: "MoonVine_Discord_Internal_SDK"
+			device:  "MoonVine_Discord_Internal_SDK"
 		}
 	}
 	gw.listener = new_gateway_listener(gw, none)

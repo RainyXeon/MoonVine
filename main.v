@@ -1,6 +1,6 @@
 module main
 
-import model
+import context
 import events
 import libs.discord
 import configs
@@ -17,28 +17,28 @@ pub fn main() {
 		return
 	}
 
-	// INFO: Setting up main model
-	mut moonvine := &model.MoonVine{
+	// INFO: Setting up main context
+	mut app := &context.App{
 		client:    discord.new_class_bot_client()
 		configs:   config_data
 		stopwatch: stopwatch
 	}
 
 	// INFO: Setting up log system
-	moonvine.log.set_time_format(log.TimeFormat.tf_rfc3339)
-	moonvine.log.set_full_logpath('./moonvine.log')
-	moonvine.log.log_to_console_too()
+	app.log.set_time_format(log.TimeFormat.tf_rfc3339)
+	app.log.set_full_logpath('./app.log')
+	app.log.log_to_console_too()
 
 	// INFO: Setting up client
-	moonvine.log.info('Booting MoonVine...')
-	moonvine.client.intents(discord.GatewayIntent.default_with(.guilds, .guild_messages, .message_content))
+	app.log_info('Booting application...')
+	app.client.intents(discord.GatewayIntent.default_with(.guilds, .guild_messages, .message_content))
 
 	// INFO: Setting up events
-	events.register(mut moonvine)
+	events.register(mut app)
 
-	elapsed := moonvine.stopwatch.elapsed()
-	moonvine.log.info('MoonVine finished initializing! Time taken: ${elapsed.microseconds()} µs (${elapsed.milliseconds()} ms)')
+	elapsed := app.stopwatch.elapsed()
+	app.log_info('Finished initializing! Time taken: ${elapsed.microseconds()} µs (${elapsed.milliseconds()} ms)')
 
 	// INFO: Login client
-	moonvine.client.login(config_data.bot.token)!
+	app.client.login(config_data.bot.token)!
 }

@@ -1,16 +1,16 @@
 module guild
 
-import model
+import context
 
 pub struct Class_GuildEventHandler {
 pub mut:
-	moonvine &model.MoonVine
+	app &context.App
 }
 
-pub fn register(mut moonvine model.MoonVine) {
+pub fn register(mut app context.App) {
 	mut handler := &Class_GuildEventHandler{
-		moonvine: moonvine
+		app: app
 	}
 
-	moonvine.client.on_message_create(handler.on_message_create)
+	app.client.on_message_create(handler.on_message_create)
 }
