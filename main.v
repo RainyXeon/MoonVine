@@ -40,5 +40,8 @@ pub fn main() {
 	app.log_info('Finished initializing! Time taken: ${elapsed.microseconds()} µs (${elapsed.milliseconds()} ms)')
 
 	// INFO: Login client
-	app.client.login(config_data.bot.token)!
+	app.client.login(config_data.bot.token) or {
+		app.log_fatal('Bot stopped: ${err}')
+		return
+	}
 }

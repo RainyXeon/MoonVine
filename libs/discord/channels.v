@@ -568,7 +568,7 @@ pub fn (this &Class_Channels) delete_messages_bulk(channel_id string, message_id
 		return error('bulk delete requires between 2 and 100 message IDs')
 	}
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/messages/bulk-delete', http.FetchConfig{
-		data: json2.encode(map[string][]string{
+		data: json2.encode({
 			'messages': message_ids
 		})
 	})!
