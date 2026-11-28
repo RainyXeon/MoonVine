@@ -187,21 +187,21 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_Application {
+pub struct ApplicationClient {
 mut:
 	cached_res ?Application
 pub:
 	endpoint string = '/applications'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_application(bc &Class_BotClient) &Class_Application {
-	mut app := &Class_Application{ bc: bc }
+pub fn new_application_client(bc &Client) &ApplicationClient {
+	mut app := &ApplicationClient{ bc: bc }
 	return app
 }
 
-pub fn (mut this Class_Application) fetch() !Application {
+pub fn (mut this ApplicationClient) fetch() !Application {
 	res := this.bc.raw_request(.get, '${this.endpoint}/@me', http.FetchConfig{}) or {
 		return err
 	}
@@ -213,7 +213,7 @@ pub fn (mut this Class_Application) fetch() !Application {
 	return json_data
 }
 
-pub fn (mut this Class_Application) edit(data EditCurrentApplicationParams) !Application {
+pub fn (mut this ApplicationClient) edit(data EditCurrentApplicationParams) !Application {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/@me', http.FetchConfig{ data: json2.encode(data) }) or {
 		return err
 	}
@@ -225,7 +225,7 @@ pub fn (mut this Class_Application) edit(data EditCurrentApplicationParams) !App
 	return json_data
 }
 
-pub fn (mut this Class_Application) fetch_activity_instance(instance_id string) !ActivityInstance {
+pub fn (mut this ApplicationClient) fetch_activity_instance(instance_id string) !ActivityInstance {
 	mut application_data := this.cached_res
 
 	if application_data == none {
@@ -245,13 +245,13 @@ pub fn (mut this Class_Application) fetch_activity_instance(instance_id string) 
 
 // fetch_role_connection_metadata retrieves an application's role connection
 // metadata definitions.
-pub fn (this &Class_Application) fetch_role_connection_metadata(application_id string) ![]ApplicationRoleConnectionMetadata {
+pub fn (this &ApplicationClient) fetch_role_connection_metadata(application_id string) ![]ApplicationRoleConnectionMetadata {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${application_id}/role-connections/metadata', http.FetchConfig{})!
 	return decode_response_list[ApplicationRoleConnectionMetadata](res)
 }
 
 // edit_role_connection_metadata updates an application's metadata definitions.
-pub fn (this &Class_Application) edit_role_connection_metadata(application_id string, metadata []EditApplicationRoleConnectionMetadata) ![]ApplicationRoleConnectionMetadata {
+pub fn (this &ApplicationClient) edit_role_connection_metadata(application_id string, metadata []EditApplicationRoleConnectionMetadata) ![]ApplicationRoleConnectionMetadata {
 	res := this.bc.raw_request(.put, '${this.endpoint}/${application_id}/role-connections/metadata', http.FetchConfig{
 		data: json2.encode(metadata)
 	})!
@@ -260,33 +260,33 @@ pub fn (this &Class_Application) edit_role_connection_metadata(application_id st
 
 // fetch_application_role_connection is the endpoint alias on the application
 // resource for application-centric SDK usage.
-pub fn (this &Class_Application) fetch_user_role_connection() !ApplicationRoleConnection {
+pub fn (this &ApplicationClient) fetch_user_role_connection() !ApplicationRoleConnection {
 	mut user_me := this.bc.users.me
 	application := this.fetch()!
 	return user_me.fetch_application_role_connection(application.id)
 }
 
-pub struct Class_ApplicationIdentityProfile {
+pub struct ApplicationClientIdentityProfile {
 pub mut:
-	users &Class_Users
+	users &UserClient
 }
 
-pub fn new_class_application_identity_profile(users &Class_Users) &Class_ApplicationIdentityProfile {
-	return &Class_ApplicationIdentityProfile{ users: users }
+pub fn new_application_client_identity_profile(users &UserClient) &ApplicationClientIdentityProfile {
+	return &ApplicationClientIdentityProfile{ users: users }
 }
 
-pub fn (this &Class_ApplicationIdentityProfile) fetch() !User {
+pub fn (this &ApplicationClientIdentityProfile) fetch() !User {
 	return this.users.me.fetch_identity_profile()
 }
 
-pub fn (this &Class_ApplicationIdentityProfile) fetch_connections() ![]Connection {
+pub fn (this &ApplicationClientIdentityProfile) fetch_connections() ![]Connection {
 	return this.users.me.fetch_connections()
 }
 
-pub fn (this &Class_ApplicationIdentityProfile) fetch_role_connection(application_id string) !ApplicationRoleConnection {
+pub fn (this &ApplicationClientIdentityProfile) fetch_role_connection(application_id string) !ApplicationRoleConnection {
 	return this.users.me.fetch_application_role_connection(application_id)
 }
 
-pub fn (this &Class_ApplicationIdentityProfile) set_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
+pub fn (this &ApplicationClientIdentityProfile) set_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
 	return this.users.me.set_application_role_connection(application_id, connection)
 }

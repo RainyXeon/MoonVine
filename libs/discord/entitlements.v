@@ -55,18 +55,18 @@ pub:
 }
 
 @[heap]
-pub struct Class_Entitlements {
+pub struct EntitlementClient {
 pub:
 	endpoint string = '/applications'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_entitlements(bc &Class_BotClient) &Class_Entitlements {
-	return &Class_Entitlements{ bc: bc }
+pub fn new_entitlement_client(bc &Client) &EntitlementClient {
+	return &EntitlementClient{ bc: bc }
 }
 
-pub fn (this &Class_Entitlements) fetch(application_id string, params EntitlementQueryParams) ![]Entitlement {
+pub fn (this &EntitlementClient) fetch(application_id string, params EntitlementQueryParams) ![]Entitlement {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${application_id}/entitlements${params.query()}', http.FetchConfig{})!
 	return decode_response_list[Entitlement](res)
 }
@@ -86,29 +86,29 @@ pub fn (params EntitlementQueryParams) query() string {
 }
 
 // fetch_skus lists an application's purchasable SKUs.
-pub fn (this &Class_Entitlements) fetch_skus(application_id string) ![]SKU {
+pub fn (this &EntitlementClient) fetch_skus(application_id string) ![]SKU {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${application_id}/skus', http.FetchConfig{})!
 	return decode_response_list[SKU](res)
 }
 
 // fetch_subscriptions lists subscriptions for a SKU. Bot owner / entitlement
 // routes are authenticated with the application's bot token.
-pub fn (this &Class_Entitlements) fetch_subscriptions(application_id string, sku_id string, params SubscriptionQueryParams) ![]Subscription {
+pub fn (this &EntitlementClient) fetch_subscriptions(application_id string, sku_id string, params SubscriptionQueryParams) ![]Subscription {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${application_id}/subscriptions/${sku_id}${params.query()}', http.FetchConfig{})!
 	return decode_response_list[Subscription](res)
 }
 
-pub fn (this &Class_Entitlements) consume(application_id string, entitlement_id string) ! {
+pub fn (this &EntitlementClient) consume(application_id string, entitlement_id string) ! {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${application_id}/entitlements/${entitlement_id}/consume', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Entitlements) delete_test_entitlement(application_id string, entitlement_id string) ! {
+pub fn (this &EntitlementClient) delete_test_entitlement(application_id string, entitlement_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${application_id}/entitlements/${entitlement_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Entitlements) create_test_entitlement(application_id string, params CreateTestEntitlementParams) !Entitlement {
+pub fn (this &EntitlementClient) create_test_entitlement(application_id string, params CreateTestEntitlementParams) !Entitlement {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${application_id}/entitlements', http.FetchConfig{
 		data: json2.encode(params)
 	})!

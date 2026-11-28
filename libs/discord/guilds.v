@@ -397,54 +397,65 @@ pub:
 	member                   ?GuildMember
 }
 
+pub struct GuildMemberModifyParams {
+pub mut:
+	nick                         ?string
+	roles                        ?[]string
+	mute                         ?bool
+	deaf                         ?bool
+	channel_id                   ?string
+	communication_disabled_until ?string
+	flags                        ?int
+}
+
 @[heap]
-pub struct Class_Guilds {
+pub struct GuildClient {
 pub:
 	endpoint string = '/guilds'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_guilds(bc &Class_BotClient) &Class_Guilds {
-	return &Class_Guilds{
+pub fn new_guild_client(bc &Client) &GuildClient {
+	return &GuildClient{
 		bc: bc
 	}
 }
 
-pub fn (this &Class_Guilds) fetch(guild_id string) !Guild {
+pub fn (this &GuildClient) fetch(guild_id string) !Guild {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}', http.FetchConfig{})!
 	return decode_response[Guild](res)
 }
 
-pub fn (this &Class_Guilds) fetch_preview(guild_id string) !GuildPreview {
+pub fn (this &GuildClient) fetch_preview(guild_id string) !GuildPreview {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/preview', http.FetchConfig{})!
 	return decode_response[GuildPreview](res)
 }
 
-pub fn (this &Class_Guilds) fetch_channels(guild_id string) ![]Channel {
+pub fn (this &GuildClient) fetch_channels(guild_id string) ![]Channel {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/channels', http.FetchConfig{})!
 	return decode_response_list[Channel](res)
 }
 
-pub fn (this &Class_Guilds) fetch_roles(guild_id string) ![]Role {
+pub fn (this &GuildClient) fetch_roles(guild_id string) ![]Role {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/roles', http.FetchConfig{})!
 	return decode_response_list[Role](res)
 }
 
-pub fn (this &Class_Guilds) fetch_audit_log(guild_id string, params AuditLogQueryParams) !AuditLog {
+pub fn (this &GuildClient) fetch_audit_log(guild_id string, params AuditLogQueryParams) !AuditLog {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/audit-logs${params.query()}', http.FetchConfig{})!
 	return decode_response[AuditLog](res)
 }
 
 // fetch_scheduled_events lists a guild's scheduled events.
-pub fn (this &Class_Guilds) fetch_scheduled_events(guild_id string, with_user_count bool) ![]GuildScheduledEvent {
+pub fn (this &GuildClient) fetch_scheduled_events(guild_id string, with_user_count bool) ![]GuildScheduledEvent {
 	query := if with_user_count { '?with_user_count=true' } else { '' }
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/scheduled-events${query}', http.FetchConfig{})!
 	return decode_response_list[GuildScheduledEvent](res)
 }
 
 // create_scheduled_event creates a scheduled event in a guild.
-pub fn (this &Class_Guilds) create_scheduled_event(guild_id string, params CreateScheduledEventParams) !GuildScheduledEvent {
+pub fn (this &GuildClient) create_scheduled_event(guild_id string, params CreateScheduledEventParams) !GuildScheduledEvent {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${guild_id}/scheduled-events', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -452,51 +463,51 @@ pub fn (this &Class_Guilds) create_scheduled_event(guild_id string, params Creat
 }
 
 // fetch_scheduled_event retrieves one scheduled event.
-pub fn (this &Class_Guilds) fetch_scheduled_event(guild_id string, event_id string) !GuildScheduledEvent {
+pub fn (this &GuildClient) fetch_scheduled_event(guild_id string, event_id string) !GuildScheduledEvent {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/scheduled-events/${event_id}', http.FetchConfig{})!
 	return decode_response[GuildScheduledEvent](res)
 }
 
-pub fn (this &Class_Guilds) fetch_soundboard_sounds(guild_id string) ![]SoundboardSound {
+pub fn (this &GuildClient) fetch_soundboard_sounds(guild_id string) ![]SoundboardSound {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/soundboard-sounds', http.FetchConfig{})!
 	return decode_response_list[SoundboardSound](res)
 }
 
-pub fn (this &Class_Guilds) fetch_soundboard_sound(guild_id string, sound_id string) !SoundboardSound {
+pub fn (this &GuildClient) fetch_soundboard_sound(guild_id string, sound_id string) !SoundboardSound {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/soundboard-sounds/${sound_id}', http.FetchConfig{})!
 	return decode_response[SoundboardSound](res)
 }
 
-pub fn (this &Class_Guilds) fetch_stage_instance(channel_id string) !StageInstance {
+pub fn (this &GuildClient) fetch_stage_instance(channel_id string) !StageInstance {
 	res := this.bc.raw_request(.get, '/stage-instances/${channel_id}', http.FetchConfig{})!
 	return decode_response[StageInstance](res)
 }
 
-pub fn (this &Class_Guilds) create_stage_instance(data CreateStageInstanceParams) !StageInstance {
+pub fn (this &GuildClient) create_stage_instance(data CreateStageInstanceParams) !StageInstance {
 	res := this.bc.raw_request(.post, '/stage-instances', http.FetchConfig{
 		data: json2.encode(data)
 	})!
 	return decode_response[StageInstance](res)
 }
 
-pub fn (this &Class_Guilds) edit_stage_instance(channel_id string, data ModifyStageInstanceParams) !StageInstance {
+pub fn (this &GuildClient) edit_stage_instance(channel_id string, data ModifyStageInstanceParams) !StageInstance {
 	res := this.bc.raw_request(.patch, '/stage-instances/${channel_id}', http.FetchConfig{
 		data: json2.encode(data)
 	})!
 	return decode_response[StageInstance](res)
 }
 
-pub fn (this &Class_Guilds) delete_stage_instance(channel_id string) ! {
+pub fn (this &GuildClient) delete_stage_instance(channel_id string) ! {
 	res := this.bc.raw_request(.delete, '/stage-instances/${channel_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) fetch_member(guild_id string, user_id string) !GuildMember {
+pub fn (this &GuildClient) fetch_member(guild_id string, user_id string) !GuildMember {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/members/${user_id}', http.FetchConfig{})!
 	return decode_response[GuildMember](res)
 }
 
-pub fn (this &Class_Guilds) fetch_bans(guild_id string, before ?string, after ?string, limit ?int) ![]GuildBan {
+pub fn (this &GuildClient) fetch_bans(guild_id string, before ?string, after ?string, limit ?int) ![]GuildBan {
 	mut pairs := []string{}
 	if value := before {
 		pairs << 'before=${urllib.query_escape(value)}'
@@ -512,17 +523,17 @@ pub fn (this &Class_Guilds) fetch_bans(guild_id string, before ?string, after ?s
 	return decode_response_list[GuildBan](res)
 }
 
-pub fn (this &Class_Guilds) fetch_webhooks(guild_id string) ![]Webhook {
+pub fn (this &GuildClient) fetch_webhooks(guild_id string) ![]Webhook {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/webhooks', http.FetchConfig{})!
 	return decode_response_list[Webhook](res)
 }
 
-pub fn (this &Class_Guilds) fetch_invites(guild_id string) ![]Invite {
+pub fn (this &GuildClient) fetch_invites(guild_id string) ![]Invite {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/invites', http.FetchConfig{})!
 	return decode_response_list[Invite](res)
 }
 
-pub fn (this &Class_Guilds) create_role(guild_id string, params RoleCreateParams, reason ?string) !Role {
+pub fn (this &GuildClient) create_role(guild_id string, params RoleCreateParams, reason ?string) !Role {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -534,7 +545,7 @@ pub fn (this &Class_Guilds) create_role(guild_id string, params RoleCreateParams
 	return decode_response[Role](res)
 }
 
-pub fn (this &Class_Guilds) delete_role(guild_id string, role_id string, reason ?string) ! {
+pub fn (this &GuildClient) delete_role(guild_id string, role_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -545,12 +556,12 @@ pub fn (this &Class_Guilds) delete_role(guild_id string, role_id string, reason 
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) fetch_templates(guild_id string) ![]GuildTemplate {
+pub fn (this &GuildClient) fetch_templates(guild_id string) ![]GuildTemplate {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/templates', http.FetchConfig{})!
 	return decode_response_list[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) create_template(guild_id string, name string, description ?string) !GuildTemplate {
+pub fn (this &GuildClient) create_template(guild_id string, name string, description ?string) !GuildTemplate {
 	mut data := map[string]string{
 		'name': name
 	}
@@ -563,31 +574,49 @@ pub fn (this &Class_Guilds) create_template(guild_id string, name string, descri
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) edit_member(guild_id string, user_id string, params GuildMemberEditParams) !GuildMember {
+pub fn (this &GuildClient) edit_member(guild_id string, user_id string, params GuildMemberEditParams) !GuildMember {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/members/${user_id}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[GuildMember](res)
 }
 
-pub fn (this &Class_Guilds) edit_current_member(guild_id string, params GuildMemberEditParams) !GuildMember {
+pub fn (this &GuildClient) edit_current_member(guild_id string, params GuildMemberEditParams) !GuildMember {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/members/@me', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[GuildMember](res)
 }
 
-pub fn (this &Class_Guilds) remove_member(guild_id string, user_id string) ! {
-	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/members/${user_id}', http.FetchConfig{})!
+pub fn (this &GuildClient) modify_member(guild_id string, user_id string, params GuildMemberModifyParams, reason ?string) !GuildMember {
+	mut header := http.new_header()
+	if value := reason {
+		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
+	}
+	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/members/${user_id}', http.FetchConfig{
+		header: header
+		data:   json2.encode(params)
+	})!
+	return decode_response[GuildMember](res)
+}
+
+pub fn (this &GuildClient) remove_member(guild_id string, user_id string, reason ?string) ! {
+	mut header := http.new_header()
+	if value := reason {
+		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
+	}
+	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/members/${user_id}', http.FetchConfig{
+		header: header
+	})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) fetch_ban(guild_id string, user_id string) !GuildBan {
+pub fn (this &GuildClient) fetch_ban(guild_id string, user_id string) !GuildBan {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/bans/${user_id}', http.FetchConfig{})!
 	return decode_response[GuildBan](res)
 }
 
-pub fn (this &Class_Guilds) create_ban(guild_id string, user_id string, delete_message_seconds ?int, reason ?string) ! {
+pub fn (this &GuildClient) create_ban(guild_id string, user_id string, delete_message_seconds ?int, reason ?string) ! {
 	mut pairs := []string{}
 	if seconds := delete_message_seconds {
 		pairs << 'delete_message_seconds=${seconds}'
@@ -603,7 +632,7 @@ pub fn (this &Class_Guilds) create_ban(guild_id string, user_id string, delete_m
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) delete_ban(guild_id string, user_id string, reason ?string) ! {
+pub fn (this &GuildClient) delete_ban(guild_id string, user_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -614,19 +643,19 @@ pub fn (this &Class_Guilds) delete_ban(guild_id string, user_id string, reason ?
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) delete_scheduled_event(guild_id string, event_id string) ! {
+pub fn (this &GuildClient) delete_scheduled_event(guild_id string, event_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/scheduled-events/${event_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) edit_scheduled_event(guild_id string, event_id string, params ModifyScheduledEventParams) !GuildScheduledEvent {
+pub fn (this &GuildClient) edit_scheduled_event(guild_id string, event_id string, params ModifyScheduledEventParams) !GuildScheduledEvent {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/scheduled-events/${event_id}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[GuildScheduledEvent](res)
 }
 
-pub fn (this &Class_Guilds) fetch_scheduled_event_users(guild_id string, event_id string, before ?string, after ?string, limit ?int, with_member bool) ![]ScheduledEventUser {
+pub fn (this &GuildClient) fetch_scheduled_event_users(guild_id string, event_id string, before ?string, after ?string, limit ?int, with_member bool) ![]ScheduledEventUser {
 	mut pairs := []string{}
 	if value := before {
 		pairs << 'before=${urllib.query_escape(value)}'
@@ -645,22 +674,22 @@ pub fn (this &Class_Guilds) fetch_scheduled_event_users(guild_id string, event_i
 	return decode_response_list[ScheduledEventUser](res)
 }
 
-pub fn (this &Class_Guilds) fetch_stickers(guild_id string) ![]Sticker {
+pub fn (this &GuildClient) fetch_stickers(guild_id string) ![]Sticker {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/stickers', http.FetchConfig{})!
 	return decode_response_list[Sticker](res)
 }
 
-pub fn (this &Class_Guilds) fetch_sticker(guild_id string, sticker_id string) !Sticker {
+pub fn (this &GuildClient) fetch_sticker(guild_id string, sticker_id string) !Sticker {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/stickers/${sticker_id}', http.FetchConfig{})!
 	return decode_response[Sticker](res)
 }
 
-pub fn (this &Class_Guilds) fetch_template_by_code(code string) !GuildTemplate {
+pub fn (this &GuildClient) fetch_template_by_code(code string) !GuildTemplate {
 	res := this.bc.raw_request(.get, '/guilds/templates/${code}', http.FetchConfig{})!
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) create_template_from_guild(guild_id string, name string, description ?string) !GuildTemplate {
+pub fn (this &GuildClient) create_template_from_guild(guild_id string, name string, description ?string) !GuildTemplate {
 	mut data := map[string]string{
 		'name': name
 	}
@@ -673,7 +702,7 @@ pub fn (this &Class_Guilds) create_template_from_guild(guild_id string, name str
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) edit(guild_id string, params GuildEditParams, reason ?string) !Guild {
+pub fn (this &GuildClient) edit(guild_id string, params GuildEditParams, reason ?string) !Guild {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -685,12 +714,12 @@ pub fn (this &Class_Guilds) edit(guild_id string, params GuildEditParams, reason
 	return decode_response[Guild](res)
 }
 
-pub fn (this &Class_Guilds) delete(guild_id string) ! {
+pub fn (this &GuildClient) delete(guild_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) edit_role(guild_id string, role_id string, params RoleEditParams, reason ?string) !Role {
+pub fn (this &GuildClient) edit_role(guild_id string, role_id string, params RoleEditParams, reason ?string) !Role {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -702,7 +731,7 @@ pub fn (this &Class_Guilds) edit_role(guild_id string, role_id string, params Ro
 	return decode_response[Role](res)
 }
 
-pub fn (this &Class_Guilds) create_channel(guild_id string, params ChannelCreateParams, reason ?string) !Channel {
+pub fn (this &GuildClient) create_channel(guild_id string, params ChannelCreateParams, reason ?string) !Channel {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -714,14 +743,14 @@ pub fn (this &Class_Guilds) create_channel(guild_id string, params ChannelCreate
 	return decode_response[Channel](res)
 }
 
-pub fn (this &Class_Guilds) reorder_channels(guild_id string, positions []ModifyChannelPositionParams) ! {
+pub fn (this &GuildClient) reorder_channels(guild_id string, positions []ModifyChannelPositionParams) ! {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/channels', http.FetchConfig{
 		data: json2.encode(positions)
 	})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) edit_template(guild_id string, template_code string, name ?string, description ?string) !GuildTemplate {
+pub fn (this &GuildClient) edit_template(guild_id string, template_code string, name ?string, description ?string) !GuildTemplate {
 	mut data := map[string]string{}
 	if value := name {
 		data['name'] = value
@@ -735,22 +764,22 @@ pub fn (this &Class_Guilds) edit_template(guild_id string, template_code string,
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) delete_template(guild_id string, template_code string) ! {
+pub fn (this &GuildClient) delete_template(guild_id string, template_code string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/templates/${template_code}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) sync_template(guild_id string, template_code string) !GuildTemplate {
+pub fn (this &GuildClient) sync_template(guild_id string, template_code string) !GuildTemplate {
 	res := this.bc.raw_request(.put, '${this.endpoint}/${guild_id}/templates/${template_code}', http.FetchConfig{})!
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Guilds) fetch_current_member(guild_id string) !GuildMember {
+pub fn (this &GuildClient) fetch_current_member(guild_id string) !GuildMember {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/members/@me', http.FetchConfig{})!
 	return decode_response[GuildMember](res)
 }
 
-pub fn (this &Class_Guilds) add_member_role(guild_id string, user_id string, role_id string, reason ?string) ! {
+pub fn (this &GuildClient) add_member_role(guild_id string, user_id string, role_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -761,7 +790,7 @@ pub fn (this &Class_Guilds) add_member_role(guild_id string, user_id string, rol
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) remove_member_role(guild_id string, user_id string, role_id string, reason ?string) ! {
+pub fn (this &GuildClient) remove_member_role(guild_id string, user_id string, role_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -772,34 +801,34 @@ pub fn (this &Class_Guilds) remove_member_role(guild_id string, user_id string, 
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) fetch_widget(guild_id string) !GuildWidgetSettings {
+pub fn (this &GuildClient) fetch_widget(guild_id string) !GuildWidgetSettings {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/widget', http.FetchConfig{})!
 	return decode_response[GuildWidgetSettings](res)
 }
 
-pub fn (this &Class_Guilds) edit_widget(guild_id string, settings GuildWidgetSettings) !GuildWidgetSettings {
+pub fn (this &GuildClient) edit_widget(guild_id string, settings GuildWidgetSettings) !GuildWidgetSettings {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${guild_id}/widget', http.FetchConfig{
 		data: json2.encode(settings)
 	})!
 	return decode_response[GuildWidgetSettings](res)
 }
 
-pub fn (this &Class_Guilds) fetch_vanity_url(guild_id string) !GuildVanityURL {
+pub fn (this &GuildClient) fetch_vanity_url(guild_id string) !GuildVanityURL {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/vanity-url', http.FetchConfig{})!
 	return decode_response[GuildVanityURL](res)
 }
 
-pub fn (this &Class_Guilds) fetch_onboarding(guild_id string) !GuildOnboarding {
+pub fn (this &GuildClient) fetch_onboarding(guild_id string) !GuildOnboarding {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/onboarding', http.FetchConfig{})!
 	return decode_response[GuildOnboarding](res)
 }
 
-pub fn (this &Class_Guilds) fetch_voice_regions(guild_id string) ![]VoiceRegion {
+pub fn (this &GuildClient) fetch_voice_regions(guild_id string) ![]VoiceRegion {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/regions', http.FetchConfig{})!
 	return decode_response_list[VoiceRegion](res)
 }
 
-pub fn (this &Class_Guilds) fetch_current_guilds() ![]Guild {
+pub fn (this &GuildClient) fetch_current_guilds() ![]Guild {
 	if !this.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -807,7 +836,7 @@ pub fn (this &Class_Guilds) fetch_current_guilds() ![]Guild {
 	return decode_response_list[Guild](res)
 }
 
-pub fn (this &Class_Guilds) leave(guild_id string) ! {
+pub fn (this &GuildClient) leave(guild_id string) ! {
 	if !this.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -815,7 +844,7 @@ pub fn (this &Class_Guilds) leave(guild_id string) ! {
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) join(guild_id string) ! {
+pub fn (this &GuildClient) join(guild_id string) ! {
 	if !this.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -823,7 +852,7 @@ pub fn (this &Class_Guilds) join(guild_id string) ! {
 	check_response(res)!
 }
 
-pub fn (this &Class_Guilds) edit_current_nick(guild_id string, nick string, reason ?string) !GuildMember {
+pub fn (this &GuildClient) edit_current_nick(guild_id string, nick string, reason ?string) !GuildMember {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -837,11 +866,22 @@ pub fn (this &Class_Guilds) edit_current_nick(guild_id string, nick string, reas
 	return decode_response[GuildMember](res)
 }
 
-pub fn (this &Class_Guilds) fetch_invite(code string) !Invite {
+pub fn (this &GuildClient) remove_ban(guild_id string, user_id string, reason ?string) ! {
+	mut header := http.new_header()
+	if value := reason {
+		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
+	}
+	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/bans/${user_id}', http.FetchConfig{
+		header: header
+	})!
+	check_response(res)!
+}
+
+pub fn (this &GuildClient) fetch_invite(code string) !Invite {
 	res := this.bc.raw_request(.get, '/invites/${urllib.path_escape(code)}', http.FetchConfig{})!
 	return decode_response[Invite](res)
 }
 
-pub fn (this &Class_Guilds) fetch_audit_log_entries(guild_id string, params AuditLogQueryParams) !AuditLog {
+pub fn (this &GuildClient) fetch_audit_log_entries(guild_id string, params AuditLogQueryParams) !AuditLog {
 	return this.fetch_audit_log(guild_id, params)
 }

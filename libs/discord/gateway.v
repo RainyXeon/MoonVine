@@ -82,28 +82,28 @@ pub enum GatewayConnectionState {
 }
 
 @[heap]
-pub struct Class_Gateway {
+pub struct GatewayClient {
 pub mut:
-	client              &Class_BotClient
+	client              &Client
 	state               GatewayConnectionState
 	intents             u32
 	last_sequence       int
 	session_id          string
 	resume_gateway_url  string
 	heartbeat_interval  int
-	heartbeat_tracker   Class_HeartbeatTracker
+	heartbeat_tracker   HeartbeatTracker
 	identify_properties GatewayIdentifyProperties
 	last_presence       PresenceUpdateParams
-	listener            &Class_GatewayListener = unsafe { nil }
+	listener            &GatewayClientListener = unsafe { nil }
 	reconnect_attempt   int
 }
 
-pub fn (this Class_Gateway) ping() i64 {
+pub fn (this GatewayClient) ping() i64 {
 	return this.heartbeat_tracker.latency_ms
 }
 
-pub fn new_gateway(client &Class_BotClient, intents u32) &Class_Gateway {
-	mut gw := &Class_Gateway{
+pub fn new_gateway(client &Client, intents u32) &GatewayClient {
+	mut gw := &GatewayClient{
 		client:              client
 		intents:             intents
 		identify_properties: GatewayIdentifyProperties{
@@ -116,7 +116,7 @@ pub fn new_gateway(client &Class_BotClient, intents u32) &Class_Gateway {
 	return gw
 }
 
-pub fn (this &Class_BotClient) fetch_gateway() !GatewayInfo {
+pub fn (this &Client) fetch_gateway() !GatewayInfo {
 	res := this.raw_request(.get, '/gateway/bot', http.FetchConfig{})!
 	return decode_response[GatewayInfo](res)
 }
@@ -189,22 +189,22 @@ pub type GatewayDispatchHandler = fn (GatewayDispatch) !
 pub type GatewayErrorHandler = fn (GatewayError)
 
 @[heap]
-pub struct Class_GatewayListener {
+pub struct GatewayClientListener {
 pub mut:
-	gateway     &Class_Gateway
+	gateway     &GatewayClient
 	events      GatewayEvents
 	on_dispatch ?GatewayDispatchHandler
 	last_error  ?GatewayError
 }
 
-pub fn new_gateway_listener(gateway &Class_Gateway, on_dispatch ?GatewayDispatchHandler) &Class_GatewayListener {
-	return &Class_GatewayListener{
+pub fn new_gateway_listener(gateway &GatewayClient, on_dispatch ?GatewayDispatchHandler) &GatewayClientListener {
+	return &GatewayClientListener{
 		gateway:     gateway
 		on_dispatch: on_dispatch
 	}
 }
 
-fn (mut listener Class_GatewayListener) emit_error(err GatewayError) {
+fn (mut listener GatewayClientListener) emit_error(err GatewayError) {
 	if err.code == 1000 && listener.last_error != none {
 		return
 	}
@@ -214,7 +214,7 @@ fn (mut listener Class_GatewayListener) emit_error(err GatewayError) {
 	}
 }
 
-fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) ! {
+fn (mut listener GatewayClientListener) emit_dispatch(dispatch GatewayDispatch) ! {
 	match dispatch.event {
 		'READY' {
 			ready := dispatch.decode[ReadyEvent]()!
@@ -268,12 +268,16 @@ fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) 
 		}
 		'CHANNEL_CREATE' {
 			if handler := listener.events.on_channel_create {
-				handler(dispatch.decode[Channel]()!)
+				mut ch := dispatch.decode[Channel]()!
+				ch.client = listener.gateway.client
+				handler(ch)
 			}
 		}
 		'CHANNEL_UPDATE' {
 			if handler := listener.events.on_channel_update {
-				handler(dispatch.decode[Channel]()!)
+				mut ch := dispatch.decode[Channel]()!
+				ch.client = listener.gateway.client
+				handler(ch)
 			}
 		}
 		'CHANNEL_DELETE' {
@@ -628,7 +632,7 @@ fn (mut listener Class_GatewayListener) emit_dispatch(dispatch GatewayDispatch) 
 }
 
 fn gateway_listener_on_message(mut ws websocket.Client, msg &websocket.Message, ref voidptr) ! {
-	mut listener := unsafe { &Class_GatewayListener(ref) }
+	mut listener := unsafe { &GatewayClientListener(ref) }
 	if msg.opcode != .text_frame {
 		return
 	}
@@ -759,7 +763,7 @@ pub fn gateway_presence_payload(presence PresenceUpdateParams) string {
 	return '{"op":3,"d":{"since":${since_json},"activities":[${activities_json.join(',')}],"status":"${presence.status.str()}","afk":${presence.afk}}}'
 }
 
-pub fn (mut listener Class_GatewayListener) set_presence(presence PresenceUpdateParams) ! {
+pub fn (mut listener GatewayClientListener) set_presence(presence PresenceUpdateParams) ! {
 	if listener.gateway.state != .ready {
 		return error('GATEWAY_NOT_READY')
 	}
@@ -770,18 +774,18 @@ pub fn (mut listener Class_GatewayListener) set_presence(presence PresenceUpdate
 	listener.gateway.last_presence = presence
 }
 
-pub fn (mut this Class_BotClient) set_presence(presence PresenceUpdateParams) ! {
+pub fn (mut this Client) set_presence(presence PresenceUpdateParams) ! {
 	if isnil(this.gateway) {
 		return error('GATEWAY_NOT_CONNECTED')
 	}
 	this.gateway.listener.set_presence(presence)!
 }
 
-pub fn (mut listener Class_GatewayListener) heartbeat(mut ws websocket.Client, now_ms i64) ! {
+pub fn (mut listener GatewayClientListener) heartbeat(mut ws websocket.Client, now_ms i64) ! {
 	listener.gateway.heartbeat_tracker.heartbeat(mut ws, listener.gateway.last_sequence, now_ms)!
 }
 
-pub fn (mut listener Class_GatewayListener) connect(gateway_url string) !&websocket.Client {
+pub fn (mut listener GatewayClientListener) connect(gateway_url string) !&websocket.Client {
 	if listener.gateway.client.token.len == 0 {
 		return error('BOT_TOKEN_NOT_FOUND')
 	}
@@ -797,7 +801,7 @@ pub fn (mut listener Class_GatewayListener) connect(gateway_url string) !&websoc
 	ws.on_message_ref(gateway_listener_on_message, voidptr(listener))
 	ws.on_close_ref(gateway_listener_on_close, voidptr(listener))
 	ws.on_error_ref(fn (mut ws websocket.Client, err string, ref voidptr) ! {
-		mut listener := unsafe { &Class_GatewayListener(ref) }
+		mut listener := unsafe { &GatewayClientListener(ref) }
 		listener.emit_error(GatewayError{
 			message: err
 		})
@@ -808,7 +812,7 @@ pub fn (mut listener Class_GatewayListener) connect(gateway_url string) !&websoc
 	return ws
 }
 
-fn (mut listener Class_GatewayListener) emit_debug(msg string) {
+fn (mut listener GatewayClientListener) emit_debug(msg string) {
 	if handler := listener.events.on_debug {
 		handler(GatewayDebugEvent{
 			message: msg
@@ -816,7 +820,7 @@ fn (mut listener Class_GatewayListener) emit_debug(msg string) {
 	}
 }
 
-fn (mut listener Class_GatewayListener) emit_disconnect(code int, reason string, resumable bool) {
+fn (mut listener GatewayClientListener) emit_disconnect(code int, reason string, resumable bool) {
 	if handler := listener.events.on_disconnect {
 		handler(GatewayDisconnectEvent{
 			code:      code
@@ -826,7 +830,7 @@ fn (mut listener Class_GatewayListener) emit_disconnect(code int, reason string,
 	}
 }
 
-fn (mut listener Class_GatewayListener) emit_reconnect(resuming bool) {
+fn (mut listener GatewayClientListener) emit_reconnect(resuming bool) {
 	listener.gateway.reconnect_attempt++
 	if handler := listener.events.on_reconnect {
 		handler(GatewayReconnectEvent{
@@ -843,7 +847,7 @@ pub fn (dispatch GatewayDispatch) decode[T]() !T {
 	}
 }
 
-pub struct Class_HeartbeatTracker {
+pub struct HeartbeatTracker {
 pub mut:
 	interval_ms       int
 	last_heartbeat_at i64
@@ -851,7 +855,7 @@ pub mut:
 	latency_ms        i64 = -1 // -1 until first OP 11 ACK is received
 }
 
-pub fn (mut tracker Class_HeartbeatTracker) start(interval_ms int) ! {
+pub fn (mut tracker HeartbeatTracker) start(interval_ms int) ! {
 	if interval_ms <= 0 {
 		return error('Gateway heartbeat interval must be positive')
 	}
@@ -861,24 +865,24 @@ pub fn (mut tracker Class_HeartbeatTracker) start(interval_ms int) ! {
 	tracker.latency_ms = -1
 }
 
-pub fn (tracker Class_HeartbeatTracker) heartbeat_due(now_ms i64) bool {
+pub fn (tracker HeartbeatTracker) heartbeat_due(now_ms i64) bool {
 	return tracker.interval_ms > 0 && (tracker.last_heartbeat_at == 0
 		|| now_ms - tracker.last_heartbeat_at >= tracker.interval_ms)
 }
 
-pub fn (mut tracker Class_HeartbeatTracker) mark_sent(now_ms i64) {
+pub fn (mut tracker HeartbeatTracker) mark_sent(now_ms i64) {
 	tracker.last_heartbeat_at = now_ms
 	tracker.awaiting_ack = true
 }
 
-pub fn (mut tracker Class_HeartbeatTracker) acknowledge(now_ms i64) {
+pub fn (mut tracker HeartbeatTracker) acknowledge(now_ms i64) {
 	if tracker.last_heartbeat_at > 0 {
 		tracker.latency_ms = now_ms - tracker.last_heartbeat_at
 	}
 	tracker.awaiting_ack = false
 }
 
-pub fn (mut tracker Class_HeartbeatTracker) heartbeat(mut ws websocket.Client, sequence ?int, now_ms i64) ! {
+pub fn (mut tracker HeartbeatTracker) heartbeat(mut ws websocket.Client, sequence ?int, now_ms i64) ! {
 	if !tracker.heartbeat_due(now_ms) {
 		return
 	}
@@ -890,7 +894,7 @@ pub fn (mut tracker Class_HeartbeatTracker) heartbeat(mut ws websocket.Client, s
 }
 
 fn gateway_listener_on_close(mut ws websocket.Client, code int, reason string, ref voidptr) ! {
-	mut listener := unsafe { &Class_GatewayListener(ref) }
+	mut listener := unsafe { &GatewayClientListener(ref) }
 	_ = ws.get_state()
 	// Ignore follow-up 1000 client close frame if a real close/error was already processed
 	if code == 1000 && listener.last_error != none {
@@ -912,7 +916,7 @@ fn gateway_listener_on_close(mut ws websocket.Client, code int, reason string, r
 	})
 }
 
-pub fn (mut listener Class_GatewayListener) listen(mut ws websocket.Client) ! {
+pub fn (mut listener GatewayClientListener) listen(mut ws websocket.Client) ! {
 	ws.listen()!
 }
 

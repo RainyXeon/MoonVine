@@ -4,7 +4,7 @@ import net.urllib
 
 pub struct Message {
 pub mut:
-	client ?&Class_BotClient @[skip]
+	client ?&Client @[skip]
 pub:
 	id                     string
 	channel_id             string
@@ -73,12 +73,12 @@ fn (p MessageEditPayload) to_params() EditMessageParams {
 }
 
 pub fn (m &Message) send(payload MessagePayload) !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	return c.channels.send_message(m.channel_id, payload.to_params())
 }
 
 pub fn (m &Message) reply(payload MessagePayload) !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	mut params := payload.to_params()
 	if params.message_reference == none {
 		params.message_reference = MessageReference{
@@ -91,12 +91,12 @@ pub fn (m &Message) reply(payload MessagePayload) !Message {
 }
 
 pub fn (m &Message) edit(payload MessageEditPayload) !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	return c.channels.edit_message(m.channel_id, m.id, payload.to_params())
 }
 
 pub fn (m &Message) reply_with(params CreateMessageParams) !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	mut p := params
 	if p.message_reference == none {
 		p.message_reference = MessageReference{
@@ -109,37 +109,37 @@ pub fn (m &Message) reply_with(params CreateMessageParams) !Message {
 }
 
 pub fn (m &Message) edit_with(params EditMessageParams) !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	return c.channels.edit_message(m.channel_id, m.id, params)
 }
 
 pub fn (m &Message) delete() ! {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	c.channels.delete_message(m.channel_id, m.id)!
 }
 
 pub fn (m &Message) react(emoji string) ! {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	c.channels.create_reaction(m.channel_id, m.id, emoji)!
 }
 
 pub fn (m &Message) remove_reaction(emoji string) ! {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	c.channels.delete_own_reaction(m.channel_id, m.id, emoji)!
 }
 
 pub fn (m &Message) pin() ! {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	c.channels.pin_message(m.channel_id, m.id)!
 }
 
 pub fn (m &Message) unpin() ! {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	c.channels.unpin_message(m.channel_id, m.id)!
 }
 
 pub fn (m &Message) crosspost() !Message {
-	c := m.client or { return error('Message is not bound to a Class_BotClient') }
+	c := m.client or { return error('Message is not bound to a Client') }
 	return c.channels.crosspost_message(m.channel_id, m.id)
 }
 

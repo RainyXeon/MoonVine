@@ -8,7 +8,7 @@ import time
 @[heap]
 pub struct App {
 pub:
-	client    &discord.Class_BotClient = unsafe { nil }
+	client    &discord.Client = unsafe { nil }
 	configs   configs.Config
 	log       &log.ThreadSafeLog = log.new_thread_safe_log()
 	stopwatch time.StopWatch

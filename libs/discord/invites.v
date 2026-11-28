@@ -53,34 +53,34 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_Invites {
+pub struct InviteClient {
 pub:
 	endpoint string = '/invites'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_invites(bc &Class_BotClient) &Class_Invites {
-	return &Class_Invites{ bc: bc }
+pub fn new_invite_client(bc &Client) &InviteClient {
+	return &InviteClient{ bc: bc }
 }
 
-pub fn (this &Class_Invites) fetch(code string) !Invite {
+pub fn (this &InviteClient) fetch(code string) !Invite {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${code}', http.FetchConfig{})!
 	return decode_response[Invite](res)
 }
 
-pub fn (this &Class_Invites) delete(code string) !Invite {
+pub fn (this &InviteClient) delete(code string) !Invite {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${code}', http.FetchConfig{})!
 	return decode_response[Invite](res)
 }
 
 // fetch_template retrieves a guild template by code.
-pub fn (this &Class_Invites) fetch_template(code string) !GuildTemplate {
+pub fn (this &InviteClient) fetch_template(code string) !GuildTemplate {
 	res := this.bc.raw_request(.get, '/guilds/templates/${code}', http.FetchConfig{})!
 	return decode_response[GuildTemplate](res)
 }
 
-pub fn (this &Class_Invites) create_from_template(template_code string, name string, icon ?string) !Guild {
+pub fn (this &InviteClient) create_from_template(template_code string, name string, icon ?string) !Guild {
 	mut data := map[string]string{
 		'name': name
 	}

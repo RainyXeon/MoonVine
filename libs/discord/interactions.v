@@ -80,34 +80,34 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_Interactions {
+pub struct InteractionClient {
 pub:
 	endpoint string = '/interactions'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_interactions(bc &Class_BotClient) &Class_Interactions {
-	return &Class_Interactions{
+pub fn new_interaction_client(bc &Client) &InteractionClient {
+	return &InteractionClient{
 		bc: bc
 	}
 }
 
-pub fn (this &Class_Interactions) create_response(interaction_id string, interaction_token string, response InteractionResponse) ! {
+pub fn (this &InteractionClient) create_response(interaction_id string, interaction_token string, response InteractionResponse) ! {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${interaction_id}/${interaction_token}/callback', http.FetchConfig{
 		data: json2.encode(response)
 	})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Interactions) fetch_original_response(application_id string, interaction_token string) !Message {
+pub fn (this &InteractionClient) fetch_original_response(application_id string, interaction_token string) !Message {
 	res := this.bc.raw_request(.get, '/webhooks/${application_id}/${interaction_token}/messages/@original', http.FetchConfig{})!
 	mut msg := decode_response[Message](res)!
 	msg.client = this.bc
 	return msg
 }
 
-pub fn (this &Class_Interactions) edit_original_response(application_id string, interaction_token string, params EditMessageParams) !Message {
+pub fn (this &InteractionClient) edit_original_response(application_id string, interaction_token string, params EditMessageParams) !Message {
 	res := this.bc.raw_request(.patch, '/webhooks/${application_id}/${interaction_token}/messages/@original', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -116,12 +116,12 @@ pub fn (this &Class_Interactions) edit_original_response(application_id string, 
 	return msg
 }
 
-pub fn (this &Class_Interactions) delete_original_response(application_id string, interaction_token string) ! {
+pub fn (this &InteractionClient) delete_original_response(application_id string, interaction_token string) ! {
 	res := this.bc.raw_request(.delete, '/webhooks/${application_id}/${interaction_token}/messages/@original', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Interactions) create_followup(application_id string, interaction_token string, params CreateMessageParams) !Message {
+pub fn (this &InteractionClient) create_followup(application_id string, interaction_token string, params CreateMessageParams) !Message {
 	res := this.bc.raw_request(.post, '/webhooks/${application_id}/${interaction_token}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -130,14 +130,14 @@ pub fn (this &Class_Interactions) create_followup(application_id string, interac
 	return msg
 }
 
-pub fn (this &Class_Interactions) fetch_followup(application_id string, interaction_token string, message_id string) !Message {
+pub fn (this &InteractionClient) fetch_followup(application_id string, interaction_token string, message_id string) !Message {
 	res := this.bc.raw_request(.get, '/webhooks/${application_id}/${interaction_token}/messages/${message_id}', http.FetchConfig{})!
 	mut msg := decode_response[Message](res)!
 	msg.client = this.bc
 	return msg
 }
 
-pub fn (this &Class_Interactions) edit_followup(application_id string, interaction_token string, message_id string, params EditMessageParams) !Message {
+pub fn (this &InteractionClient) edit_followup(application_id string, interaction_token string, message_id string, params EditMessageParams) !Message {
 	res := this.bc.raw_request(.patch, '/webhooks/${application_id}/${interaction_token}/messages/${message_id}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -146,55 +146,55 @@ pub fn (this &Class_Interactions) edit_followup(application_id string, interacti
 	return msg
 }
 
-pub fn (this &Class_Interactions) delete_followup(application_id string, interaction_token string, message_id string) ! {
+pub fn (this &InteractionClient) delete_followup(application_id string, interaction_token string, message_id string) ! {
 	res := this.bc.raw_request(.delete, '/webhooks/${application_id}/${interaction_token}/messages/${message_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Interactions) fetch_global_commands(application_id string) ![]ApplicationCommand {
+pub fn (this &InteractionClient) fetch_global_commands(application_id string) ![]ApplicationCommand {
 	res := this.bc.raw_request(.get, '/applications/${application_id}/commands', http.FetchConfig{})!
 	return decode_response_list[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) create_global_command(application_id string, params ApplicationCommandCreateParams) !ApplicationCommand {
+pub fn (this &InteractionClient) create_global_command(application_id string, params ApplicationCommandCreateParams) !ApplicationCommand {
 	res := this.bc.raw_request(.post, '/applications/${application_id}/commands', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) bulk_overwrite_global_commands(application_id string, commands []ApplicationCommandCreateParams) ![]ApplicationCommand {
+pub fn (this &InteractionClient) bulk_overwrite_global_commands(application_id string, commands []ApplicationCommandCreateParams) ![]ApplicationCommand {
 	res := this.bc.raw_request(.put, '/applications/${application_id}/commands', http.FetchConfig{
 		data: json2.encode(commands)
 	})!
 	return decode_response_list[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) delete_global_command(application_id string, command_id string) ! {
+pub fn (this &InteractionClient) delete_global_command(application_id string, command_id string) ! {
 	res := this.bc.raw_request(.delete, '/applications/${application_id}/commands/${command_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Interactions) fetch_guild_commands(application_id string, guild_id string) ![]ApplicationCommand {
+pub fn (this &InteractionClient) fetch_guild_commands(application_id string, guild_id string) ![]ApplicationCommand {
 	res := this.bc.raw_request(.get, '/applications/${application_id}/guilds/${guild_id}/commands', http.FetchConfig{})!
 	return decode_response_list[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) create_guild_command(application_id string, guild_id string, params ApplicationCommandCreateParams) !ApplicationCommand {
+pub fn (this &InteractionClient) create_guild_command(application_id string, guild_id string, params ApplicationCommandCreateParams) !ApplicationCommand {
 	res := this.bc.raw_request(.post, '/applications/${application_id}/guilds/${guild_id}/commands', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) bulk_overwrite_guild_commands(application_id string, guild_id string, commands []ApplicationCommandCreateParams) ![]ApplicationCommand {
+pub fn (this &InteractionClient) bulk_overwrite_guild_commands(application_id string, guild_id string, commands []ApplicationCommandCreateParams) ![]ApplicationCommand {
 	res := this.bc.raw_request(.put, '/applications/${application_id}/guilds/${guild_id}/commands', http.FetchConfig{
 		data: json2.encode(commands)
 	})!
 	return decode_response_list[ApplicationCommand](res)
 }
 
-pub fn (this &Class_Interactions) delete_guild_command(application_id string, guild_id string, command_id string) ! {
+pub fn (this &InteractionClient) delete_guild_command(application_id string, guild_id string, command_id string) ! {
 	res := this.bc.raw_request(.delete, '/applications/${application_id}/guilds/${guild_id}/commands/${command_id}', http.FetchConfig{})!
 	check_response(res)!
 }

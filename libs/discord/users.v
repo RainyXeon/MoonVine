@@ -75,28 +75,28 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_Users {
+pub struct UserClient {
 mut:
 	cached_res ?User
 pub:
 	endpoint string = '/users'
 pub mut:
-	me               Class_Users_Me
-	identity_profile &Class_ApplicationIdentityProfile = unsafe { nil }
-	bc               &Class_BotClient
+	me               UserClientCurrent
+	identity_profile &ApplicationClientIdentityProfile = unsafe { nil }
+	bc               &Client
 }
 
-pub fn new_class_users(bc &Class_BotClient) &Class_Users {
-	mut users := &Class_Users{
+pub fn new_user_client(bc &Client) &UserClient {
+	mut users := &UserClient{
 		bc: bc
-		me: Class_Users_Me{}
+		me: UserClientCurrent{}
 	}
 	users.me.users = users
-	users.identity_profile = new_class_application_identity_profile(users)
+	users.identity_profile = new_application_client_identity_profile(users)
 	return users
 }
 
-pub fn (mut this Class_Users) fetch(user_id string) !User {
+pub fn (mut this UserClient) fetch(user_id string) !User {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${user_id}', http.FetchConfig{}) or {
 		return err
 	}
@@ -106,13 +106,29 @@ pub fn (mut this Class_Users) fetch(user_id string) !User {
 	return json_data
 }
 
-pub struct Class_Users_Me {
+pub fn (this &UserClient) create_dm(recipient_id string) !Channel {
+	res := this.bc.raw_request(.post, '${this.endpoint}/@me/channels', http.FetchConfig{
+		data: json2.encode({
+			'recipient_id': recipient_id
+		})
+	})!
+	mut ch := decode_response[Channel](res)!
+	ch.client = this.bc
+	return ch
+}
+
+pub fn (this &UserClient) leave_guild(guild_id string) ! {
+	res := this.bc.raw_request(.delete, '${this.endpoint}/@me/guilds/${guild_id}', http.FetchConfig{})!
+	check_response(res)!
+}
+
+pub struct UserClientCurrent {
 pub mut:
-	users &Class_Users = unsafe { nil }
+	users &UserClient = unsafe { nil }
 	data  User
 }
 
-pub fn (mut this Class_Users_Me) fetch() !User {
+pub fn (mut this UserClientCurrent) fetch() !User {
 	res := this.users.bc.raw_request(.get, '${this.users.endpoint}/@me', http.FetchConfig{}) or {
 		return err
 	}
@@ -122,7 +138,7 @@ pub fn (mut this Class_Users_Me) fetch() !User {
 	return json_data
 }
 
-pub fn (mut this Class_Users_Me) fetch_connections() ![]Connection {
+pub fn (mut this UserClientCurrent) fetch_connections() ![]Connection {
 	if !this.users.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -137,7 +153,7 @@ pub fn (mut this Class_Users_Me) fetch_connections() ![]Connection {
 	return json_data
 }
 
-pub fn (mut this Class_Users_Me) edit(data EditUserMeParams) !User {
+pub fn (mut this UserClientCurrent) edit(data EditUserMeParams) !User {
 	if !this.users.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -154,7 +170,7 @@ pub fn (mut this Class_Users_Me) edit(data EditUserMeParams) !User {
 
 // fetch_application_role_connection retrieves the current user's role connection
 // for an application. This endpoint requires a user OAuth2 token, not a bot token.
-pub fn (this &Class_Users_Me) fetch_application_role_connection(application_id string) !ApplicationRoleConnection {
+pub fn (this &UserClientCurrent) fetch_application_role_connection(application_id string) !ApplicationRoleConnection {
 	if !this.users.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -166,7 +182,7 @@ pub fn (this &Class_Users_Me) fetch_application_role_connection(application_id s
 
 // set_application_role_connection sets the current user's role connection for
 // an application. This endpoint requires a user OAuth2 token, not a bot token.
-pub fn (this &Class_Users_Me) set_application_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
+pub fn (this &UserClientCurrent) set_application_role_connection(application_id string, connection ApplicationRoleConnection) !ApplicationRoleConnection {
 	if !this.users.bc.user_token {
 		return error('USER_OAUTH_TOKEN_REQUIRED')
 	}
@@ -181,6 +197,6 @@ pub fn (this &Class_Users_Me) set_application_role_connection(application_id str
 
 // fetch_identity_profile retrieves the authenticated user identity profile.
 // The configured token must be a user OAuth2 access token.
-pub fn (this &Class_Users_Me) fetch_identity_profile() !User {
+pub fn (this &UserClientCurrent) fetch_identity_profile() !User {
 	return this.fetch()
 }

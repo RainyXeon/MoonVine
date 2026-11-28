@@ -58,30 +58,30 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_Webhooks {
+pub struct WebhookClient {
 pub:
 	endpoint string = '/webhooks'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_webhooks(bc &Class_BotClient) &Class_Webhooks {
-	return &Class_Webhooks{ bc: bc }
+pub fn new_webhook_client(bc &Client) &WebhookClient {
+	return &WebhookClient{ bc: bc }
 }
 
-pub fn (this &Class_Webhooks) fetch(webhook_id string) !Webhook {
+pub fn (this &WebhookClient) fetch(webhook_id string) !Webhook {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${webhook_id}', http.FetchConfig{})!
 	return decode_response[Webhook](res)
 }
 
-pub fn (this &Class_Webhooks) execute(webhook_id string, token string, params ExecuteWebhookParams) !Message {
+pub fn (this &WebhookClient) execute(webhook_id string, token string, params ExecuteWebhookParams) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${webhook_id}/${token}?wait=true', http.FetchConfig{
 		data: json2.encode(params)
 	})!
 	return decode_response[Message](res)
 }
 
-pub fn (this &Class_Webhooks) delete(webhook_id string, reason ?string) ! {
+pub fn (this &WebhookClient) delete(webhook_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -92,7 +92,7 @@ pub fn (this &Class_Webhooks) delete(webhook_id string, reason ?string) ! {
 	check_response(res)!
 }
 
-pub fn (this &Class_Webhooks) edit(webhook_id string, params EditWebhookParams, reason ?string) !Webhook {
+pub fn (this &WebhookClient) edit(webhook_id string, params EditWebhookParams, reason ?string) !Webhook {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!

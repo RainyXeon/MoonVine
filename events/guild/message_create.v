@@ -2,7 +2,7 @@ module guild
 
 import libs.discord
 
-pub fn (mut h Class_GuildEventHandler) on_message_create(msg discord.Message) {
+pub fn (mut h GuildEventHandler) on_message_create(msg discord.Message) {
 	if msg.content == '!ping' {
 		ws_ping := h.app.client.gateway.ping()
 

@@ -29,28 +29,28 @@ pub mut:
 	roles ?[]string
 }
 
-pub struct Class_Emojis {
+pub struct EmojiClient {
 pub:
 	endpoint string = '/guilds'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_emojis(bc &Class_BotClient) &Class_Emojis {
-	return &Class_Emojis{ bc: bc }
+pub fn new_emoji_client(bc &Client) &EmojiClient {
+	return &EmojiClient{ bc: bc }
 }
 
-pub fn (this &Class_Emojis) fetch_all(guild_id string) ![]Emoji {
+pub fn (this &EmojiClient) fetch_all(guild_id string) ![]Emoji {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/emojis', http.FetchConfig{})!
 	return decode_response_list[Emoji](res)
 }
 
-pub fn (this &Class_Emojis) fetch(guild_id string, emoji_id string) !Emoji {
+pub fn (this &EmojiClient) fetch(guild_id string, emoji_id string) !Emoji {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/emojis/${emoji_id}', http.FetchConfig{})!
 	return decode_response[Emoji](res)
 }
 
-pub fn (this &Class_Emojis) create(guild_id string, data CreateGuildEmojiParams, reason ?string) !Emoji {
+pub fn (this &EmojiClient) create(guild_id string, data CreateGuildEmojiParams, reason ?string) !Emoji {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -63,7 +63,7 @@ pub fn (this &Class_Emojis) create(guild_id string, data CreateGuildEmojiParams,
 	return decode_response[Emoji](res)
 }
 
-pub fn (this &Class_Emojis) edit(guild_id string, emoji_id string, data ModifyGuildEmojiParams, reason ?string) !Emoji {
+pub fn (this &EmojiClient) edit(guild_id string, emoji_id string, data ModifyGuildEmojiParams, reason ?string) !Emoji {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -76,7 +76,7 @@ pub fn (this &Class_Emojis) edit(guild_id string, emoji_id string, data ModifyGu
 	return decode_response[Emoji](res)
 }
 
-pub fn (this &Class_Emojis) delete(guild_id string, emoji_id string) ! {
+pub fn (this &EmojiClient) delete(guild_id string, emoji_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/emojis/${emoji_id}', http.FetchConfig{})!
 	check_response(res)!
 }

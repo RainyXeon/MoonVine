@@ -28,7 +28,7 @@ pub mut:
 }
 
 @[heap]
-pub struct Class_BotClient {
+pub struct Client {
 	api_base_url string = 'https://discord.com/api'
 	api_version  string = '10'
 mut:
@@ -38,56 +38,56 @@ mut:
 	base_url        string
 pub mut:
 	events          GatewayEvents
-	application     &Class_Application    = unsafe { nil }
-	users           &Class_Users          = unsafe { nil }
-	channels        &Class_Channels       = unsafe { nil }
-	guilds          &Class_Guilds         = unsafe { nil }
-	invites         &Class_Invites        = unsafe { nil }
-	webhooks        &Class_Webhooks       = unsafe { nil }
-	entitlements    &Class_Entitlements   = unsafe { nil }
-	auto_moderation &Class_AutoModeration = unsafe { nil }
-	emojis          &Class_Emojis         = unsafe { nil }
-	gateway         &Class_Gateway        = unsafe { nil }
-	interactions    &Class_Interactions   = unsafe { nil }
+	application     &ApplicationClient    = unsafe { nil }
+	users           &UserClient           = unsafe { nil }
+	channels        &ChannelClient        = unsafe { nil }
+	guilds          &GuildClient          = unsafe { nil }
+	invites         &InviteClient         = unsafe { nil }
+	webhooks        &WebhookClient        = unsafe { nil }
+	entitlements    &EntitlementClient    = unsafe { nil }
+	auto_moderation &AutoModerationClient = unsafe { nil }
+	emojis          &EmojiClient          = unsafe { nil }
+	gateway         &GatewayClient        = unsafe { nil }
+	interactions    &InteractionClient    = unsafe { nil }
 	ws              &websocket.Client     = unsafe { nil }
 }
 
-pub fn new_class_bot_client() &Class_BotClient {
-	mut bc := &Class_BotClient{}
-	bc.application = new_class_application(bc)
-	bc.users = new_class_users(bc)
-	bc.channels = new_class_channels(bc)
-	bc.guilds = new_class_guilds(bc)
-	bc.invites = new_class_invites(bc)
-	bc.webhooks = new_class_webhooks(bc)
-	bc.entitlements = new_class_entitlements(bc)
-	bc.auto_moderation = new_class_auto_moderation(bc)
-	bc.emojis = new_class_emojis(bc)
-	bc.interactions = new_class_interactions(bc)
+pub fn new_class_bot_client() &Client {
+	mut bc := &Client{}
+	bc.application = new_application_client(bc)
+	bc.users = new_user_client(bc)
+	bc.channels = new_channel_client(bc)
+	bc.guilds = new_guild_client(bc)
+	bc.invites = new_invite_client(bc)
+	bc.webhooks = new_webhook_client(bc)
+	bc.entitlements = new_entitlement_client(bc)
+	bc.auto_moderation = new_auto_moderation_client(bc)
+	bc.emojis = new_emoji_client(bc)
+	bc.interactions = new_interaction_client(bc)
 	return bc
 }
 
-pub fn (this Class_BotClient) api_url() string {
+pub fn (this Client) api_url() string {
 	return '${this.api_base_url}/v${this.api_version}'
 }
 
-pub fn (mut this Class_BotClient) login_user(token string) &Class_BotClient {
+pub fn (mut this Client) login_user(token string) &Client {
 	this.token = token
 	this.user_token = true
 	return this
 }
 
-pub fn (mut this Class_BotClient) api_base(url string) &Class_BotClient {
+pub fn (mut this Client) api_base(url string) &Client {
 	this.base_url = url.trim_right('/')
 	return this
 }
 
-pub fn (mut this Class_BotClient) intents(intents u32) &Class_BotClient {
+pub fn (mut this Client) intents(intents u32) &Client {
 	this.gateway_intents = intents
 	return this
 }
 
-pub fn (mut this Class_BotClient) login(token string) !&Class_BotClient {
+pub fn (mut this Client) login(token string) !&Client {
 	this.user_token = false
 	this.token = token
 	this.gateway = new_gateway(this, this.gateway_intents)
@@ -154,7 +154,7 @@ pub fn (mut this Class_BotClient) login(token string) !&Class_BotClient {
 	return this
 }
 
-fn (mut this Class_BotClient) start_heartbeat_loop() {
+fn (mut this Client) start_heartbeat_loop() {
 	for this.gateway.heartbeat_interval <= 0
 		&& this.gateway.state !in [.closed, .reconnecting] {
 		time.sleep(50 * time.millisecond)
@@ -177,31 +177,31 @@ fn (mut this Class_BotClient) start_heartbeat_loop() {
 	}
 }
 
-pub fn (this &Class_BotClient) fetch_lobby(lobby_id string) !Lobby {
+pub fn (this &Client) fetch_lobby(lobby_id string) !Lobby {
 	res := this.raw_request(.get, '/lobbies/${lobby_id}', http.FetchConfig{})!
 	return decode_response[Lobby](res)
 }
 
-pub fn (this &Class_BotClient) create_lobby(data CreateLobbyParams) !Lobby {
+pub fn (this &Client) create_lobby(data CreateLobbyParams) !Lobby {
 	res := this.raw_request(.post, '/lobbies', http.FetchConfig{
 		data: json2.encode(data)
 	})!
 	return decode_response[Lobby](res)
 }
 
-pub fn (this &Class_BotClient) edit_lobby(lobby_id string, data ModifyLobbyParams) !Lobby {
+pub fn (this &Client) edit_lobby(lobby_id string, data ModifyLobbyParams) !Lobby {
 	res := this.raw_request(.patch, '/lobbies/${lobby_id}', http.FetchConfig{
 		data: json2.encode(data)
 	})!
 	return decode_response[Lobby](res)
 }
 
-pub fn (this &Class_BotClient) delete_lobby(lobby_id string) ! {
+pub fn (this &Client) delete_lobby(lobby_id string) ! {
 	res := this.raw_request(.delete, '/lobbies/${lobby_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (mut this Class_BotClient) raw_request(method http.Method, route string, override_config http.FetchConfig) !http.Response {
+pub fn (mut this Client) raw_request(method http.Method, route string, override_config http.FetchConfig) !http.Response {
 	if this.token.len == 0 {
 		return error('BOT_TOKEN_NOT_FOUND')
 	}

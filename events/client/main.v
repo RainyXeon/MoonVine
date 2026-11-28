@@ -2,13 +2,13 @@ module client
 
 import context
 
-pub struct Class_ClientEventHandler {
+pub struct ClientEventHandler {
 pub mut:
 	app &context.App
 }
 
 pub fn register(mut app context.App) {
-	mut handler := &Class_ClientEventHandler{
+	mut handler := &ClientEventHandler{
 		app: app
 	}
 

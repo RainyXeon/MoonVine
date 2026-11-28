@@ -5,6 +5,8 @@ import net.urllib
 import net.http
 
 pub struct Channel {
+pub mut:
+	client ?&Client @[skip]
 pub:
 	id                                 string
 	channel_type                       int @[json: 'type']
@@ -41,6 +43,75 @@ pub:
 	default_thread_rate_limit_per_user ?int
 	default_sort_order                 ?int
 	default_forum_layout               ?int
+}
+
+// --- Channel Methods ---
+pub fn (ch &Channel) send(payload MessagePayload) !Message {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.send_message(ch.id, payload.to_params())
+}
+
+pub fn (ch &Channel) fetch_message(message_id string) !Message {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.fetch_message(ch.id, message_id)
+}
+
+pub fn (ch &Channel) fetch_messages(params MessageQueryParams) ![]Message {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.fetch_messages(ch.id, params)
+}
+
+pub fn (ch &Channel) delete_messages_bulk(message_ids []string) ! {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	c.channels.delete_messages_bulk(ch.id, message_ids)!
+}
+
+pub fn (ch &Channel) trigger_typing() ! {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	c.channels.trigger_typing(ch.id)!
+}
+
+pub fn (ch &Channel) fetch_pins() ![]Message {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.fetch_pins(ch.id)
+}
+
+pub fn (ch &Channel) edit(params ChannelEditParams, reason ?string) !Channel {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.edit(ch.id, params, reason)
+}
+
+pub fn (ch &Channel) delete(reason ?string) !Channel {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.delete(ch.id, reason)
+}
+
+pub fn (ch &Channel) edit_overwrite(target_id string, overwrite EditChannelPermissionsParams, reason ?string) ! {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	c.channels.edit_overwrite(ch.id, target_id, overwrite, reason)!
+}
+
+pub fn (ch &Channel) delete_overwrite(target_id string, reason ?string) ! {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	c.channels.delete_overwrite(ch.id, target_id, reason)!
+}
+
+pub fn (ch &Channel) create_invite(params CreateInviteParams, reason ?string) !Invite {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.create_invite(ch.id, params, reason)
+}
+
+pub fn (ch &Channel) create_webhook(params CreateWebhookParams, reason ?string) !Webhook {
+	c := ch.client or { return error('Channel is not bound to a Client') }
+	return c.channels.create_webhook(ch.id, params, reason)
+}
+
+pub fn (ch &Channel) is_thread() bool {
+	return ch.channel_type in [10, 11, 12]
+}
+
+pub fn (ch &Channel) is_dm() bool {
+	return ch.channel_type in [1, 3]
 }
 
 pub struct ThreadMetadata {
@@ -345,38 +416,40 @@ pub:
 }
 
 @[heap]
-pub struct Class_Channels {
+pub struct ChannelClient {
 pub:
 	endpoint string = '/channels'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_channels(bc &Class_BotClient) &Class_Channels {
-	return &Class_Channels{
+pub fn new_channel_client(bc &Client) &ChannelClient {
+	return &ChannelClient{
 		bc: bc
 	}
 }
 
-pub fn (this &Class_Channels) fetch(channel_id string) !Channel {
+pub fn (this &ChannelClient) fetch(channel_id string) !Channel {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}', http.FetchConfig{})!
-	return decode_response[Channel](res)
+	mut ch := decode_response[Channel](res)!
+	ch.client = this.bc
+	return ch
 }
 
-pub fn (this &Class_Channels) fetch_message(channel_id string, message_id string) !Message {
+pub fn (this &ChannelClient) fetch_message(channel_id string, message_id string) !Message {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{})!
 	mut msg := decode_response[Message](res)!
 	msg.client = this.bc
 	return msg
 }
 
-pub fn (this &Class_Channels) fetch_messages(channel_id string, params MessageQueryParams) ![]Message {
+pub fn (this &ChannelClient) fetch_messages(channel_id string, params MessageQueryParams) ![]Message {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/messages${params.query()}', http.FetchConfig{})!
 	mut msgs := decode_response_list[Message](res)!
 	return this.bind_messages(mut msgs)
 }
 
-pub fn (this &Class_Channels) send_message(channel_id string, params CreateMessageParams) !Message {
+pub fn (this &ChannelClient) send_message(channel_id string, params CreateMessageParams) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/messages', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -385,7 +458,7 @@ pub fn (this &Class_Channels) send_message(channel_id string, params CreateMessa
 	return msg
 }
 
-pub fn (this &Class_Channels) edit_message(channel_id string, message_id string, params EditMessageParams) !Message {
+pub fn (this &ChannelClient) edit_message(channel_id string, message_id string, params EditMessageParams) !Message {
 	res := this.bc.raw_request(.patch, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{
 		data: json2.encode(params)
 	})!
@@ -394,50 +467,50 @@ pub fn (this &Class_Channels) edit_message(channel_id string, message_id string,
 	return msg
 }
 
-pub fn (this &Class_Channels) delete_message(channel_id string, message_id string) ! {
+pub fn (this &ChannelClient) delete_message(channel_id string, message_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/messages/${message_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) create_reaction(channel_id string, message_id string, emoji string) ! {
+pub fn (this &ChannelClient) create_reaction(channel_id string, message_id string, emoji string) ! {
 	encoded_emoji := urllib.path_escape(emoji)
 	res := this.bc.raw_request(.put, '${this.endpoint}/${channel_id}/messages/${message_id}/reactions/${encoded_emoji}/@me', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) delete_own_reaction(channel_id string, message_id string, emoji string) ! {
+pub fn (this &ChannelClient) delete_own_reaction(channel_id string, message_id string, emoji string) ! {
 	encoded_emoji := urllib.path_escape(emoji)
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/messages/${message_id}/reactions/${encoded_emoji}/@me', http.FetchConfig{})!
 	check_response(res)!
 }
 
 // fetch_sticker retrieves a sticker by ID.
-pub fn (this &Class_Channels) fetch_sticker(sticker_id string) !Sticker {
+pub fn (this &ChannelClient) fetch_sticker(sticker_id string) !Sticker {
 	res := this.bc.raw_request(.get, '/stickers/${sticker_id}', http.FetchConfig{})!
 	return decode_response[Sticker](res)
 }
 
 // fetch_sticker_packs lists standard sticker packs.
-pub fn (this &Class_Channels) fetch_sticker_packs() ![]StickerPack {
+pub fn (this &ChannelClient) fetch_sticker_packs() ![]StickerPack {
 	res := this.bc.raw_request(.get, '/sticker-packs', http.FetchConfig{})!
 	return decode_response_list[StickerPack](res)
 }
 
-pub fn (this &Class_Channels) expire_poll(channel_id string, message_id string) !Message {
+pub fn (this &ChannelClient) expire_poll(channel_id string, message_id string) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/polls/${message_id}/expire', http.FetchConfig{})!
 	mut msg := decode_response[Message](res)!
 	msg.client = this.bc
 	return msg
 }
 
-fn (this &Class_Channels) bind_messages(mut msgs []Message) []Message {
+fn (this &ChannelClient) bind_messages(mut msgs []Message) []Message {
 	for mut m in msgs {
 		m.client = this.bc
 	}
 	return msgs
 }
 
-pub fn (this &Class_Channels) fetch_poll_answer_voters(channel_id string, message_id string, answer_id int, after ?string, limit ?int) !PollAnswerVotersResult {
+pub fn (this &ChannelClient) fetch_poll_answer_voters(channel_id string, message_id string, answer_id int, after ?string, limit ?int) !PollAnswerVotersResult {
 	mut pairs := []string{}
 	if value := after {
 		pairs << 'after=${urllib.query_escape(value)}'
@@ -450,35 +523,35 @@ pub fn (this &Class_Channels) fetch_poll_answer_voters(channel_id string, messag
 	return decode_response[PollAnswerVotersResult](res)
 }
 
-pub fn (this &Class_Channels) crosspost_message(channel_id string, message_id string) !Message {
+pub fn (this &ChannelClient) crosspost_message(channel_id string, message_id string) !Message {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/messages/${message_id}/crosspost', http.FetchConfig{})!
 	mut msg := decode_response[Message](res)!
 	msg.client = this.bc
 	return msg
 }
 
-pub fn (this &Class_Channels) trigger_typing(channel_id string) ! {
+pub fn (this &ChannelClient) trigger_typing(channel_id string) ! {
 	res := this.bc.raw_request(.post, '${this.endpoint}/${channel_id}/typing', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) fetch_pins(channel_id string) ![]Message {
+pub fn (this &ChannelClient) fetch_pins(channel_id string) ![]Message {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${channel_id}/pins', http.FetchConfig{})!
 	mut msgs := decode_response_list[Message](res)!
 	return this.bind_messages(mut msgs)
 }
 
-pub fn (this &Class_Channels) pin_message(channel_id string, message_id string) ! {
+pub fn (this &ChannelClient) pin_message(channel_id string, message_id string) ! {
 	res := this.bc.raw_request(.put, '${this.endpoint}/${channel_id}/pins/${message_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) unpin_message(channel_id string, message_id string) ! {
+pub fn (this &ChannelClient) unpin_message(channel_id string, message_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/pins/${message_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) edit_overwrite(channel_id string, target_id string, overwrite EditChannelPermissionsParams, reason ?string) ! {
+pub fn (this &ChannelClient) edit_overwrite(channel_id string, target_id string, overwrite EditChannelPermissionsParams, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -490,7 +563,7 @@ pub fn (this &Class_Channels) edit_overwrite(channel_id string, target_id string
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) delete_overwrite(channel_id string, target_id string, reason ?string) ! {
+pub fn (this &ChannelClient) delete_overwrite(channel_id string, target_id string, reason ?string) ! {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -501,7 +574,7 @@ pub fn (this &Class_Channels) delete_overwrite(channel_id string, target_id stri
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) edit(channel_id string, params ChannelEditParams, reason ?string) !Channel {
+pub fn (this &ChannelClient) edit(channel_id string, params ChannelEditParams, reason ?string) !Channel {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -510,10 +583,12 @@ pub fn (this &Class_Channels) edit(channel_id string, params ChannelEditParams, 
 		header: header
 		data:   json2.encode(params)
 	})!
-	return decode_response[Channel](res)
+	mut ch := decode_response[Channel](res)!
+	ch.client = this.bc
+	return ch
 }
 
-pub fn (this &Class_Channels) delete(channel_id string, reason ?string) !Channel {
+pub fn (this &ChannelClient) delete(channel_id string, reason ?string) !Channel {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -521,10 +596,12 @@ pub fn (this &Class_Channels) delete(channel_id string, reason ?string) !Channel
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}', http.FetchConfig{
 		header: header
 	})!
-	return decode_response[Channel](res)
+	mut ch := decode_response[Channel](res)!
+	ch.client = this.bc
+	return ch
 }
 
-pub fn (this &Class_Channels) create_invite(channel_id string, params CreateInviteParams, reason ?string) !Invite {
+pub fn (this &ChannelClient) create_invite(channel_id string, params CreateInviteParams, reason ?string) !Invite {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -536,7 +613,7 @@ pub fn (this &Class_Channels) create_invite(channel_id string, params CreateInvi
 	return decode_response[Invite](res)
 }
 
-pub fn (this &Class_Channels) create_webhook(channel_id string, params CreateWebhookParams, reason ?string) !Webhook {
+pub fn (this &ChannelClient) create_webhook(channel_id string, params CreateWebhookParams, reason ?string) !Webhook {
 	mut header := http.new_header()
 	if value := reason {
 		header.add_custom('X-Audit-Log-Reason', urllib.query_escape(value))!
@@ -548,7 +625,7 @@ pub fn (this &Class_Channels) create_webhook(channel_id string, params CreateWeb
 	return decode_response[Webhook](res)
 }
 
-pub fn (this &Class_Channels) fetch_pinned_messages(channel_id string, before ?string, limit ?int) ![]Message {
+pub fn (this &ChannelClient) fetch_pinned_messages(channel_id string, before ?string, limit ?int) ![]Message {
 	mut pairs := []string{}
 	if value := before {
 		pairs << 'before=${urllib.query_escape(value)}'
@@ -562,28 +639,28 @@ pub fn (this &Class_Channels) fetch_pinned_messages(channel_id string, before ?s
 	return this.bind_messages(mut msgs)
 }
 
-pub fn (this &Class_Channels) delete_all_reactions(channel_id string, message_id string) ! {
+pub fn (this &ChannelClient) delete_all_reactions(channel_id string, message_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/messages/${message_id}/reactions', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) delete_emoji_reactions(channel_id string, message_id string, emoji string) ! {
+pub fn (this &ChannelClient) delete_emoji_reactions(channel_id string, message_id string, emoji string) ! {
 	encoded_emoji := urllib.path_escape(emoji)
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/messages/${message_id}/reactions/${encoded_emoji}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) create_poll_vote(channel_id string, message_id string, answer_id int) ! {
+pub fn (this &ChannelClient) create_poll_vote(channel_id string, message_id string, answer_id int) ! {
 	res := this.bc.raw_request(.put, '${this.endpoint}/${channel_id}/polls/${message_id}/answers/${answer_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) delete_poll_vote(channel_id string, message_id string, answer_id int) ! {
+pub fn (this &ChannelClient) delete_poll_vote(channel_id string, message_id string, answer_id int) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${channel_id}/polls/${message_id}/answers/${answer_id}', http.FetchConfig{})!
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) delete_messages_bulk(channel_id string, message_ids []string) ! {
+pub fn (this &ChannelClient) delete_messages_bulk(channel_id string, message_ids []string) ! {
 	if message_ids.len < 2 || message_ids.len > 100 {
 		return error('bulk delete requires between 2 and 100 message IDs')
 	}
@@ -595,7 +672,7 @@ pub fn (this &Class_Channels) delete_messages_bulk(channel_id string, message_id
 	check_response(res)!
 }
 
-pub fn (this &Class_Channels) fetch_reaction_users(channel_id string, message_id string, emoji string, params MessageReactionQueryParams) ![]User {
+pub fn (this &ChannelClient) fetch_reaction_users(channel_id string, message_id string, emoji string, params MessageReactionQueryParams) ![]User {
 	mut pairs := []string{}
 	if value := params.reaction_type {
 		pairs << 'type=${value}'

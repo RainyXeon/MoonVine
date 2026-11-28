@@ -2,13 +2,13 @@ module guild
 
 import context
 
-pub struct Class_GuildEventHandler {
+pub struct GuildEventHandler {
 pub mut:
 	app &context.App
 }
 
 pub fn register(mut app context.App) {
-	mut handler := &Class_GuildEventHandler{
+	mut handler := &GuildEventHandler{
 		app: app
 	}
 

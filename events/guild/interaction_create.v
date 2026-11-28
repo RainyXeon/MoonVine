@@ -2,10 +2,10 @@ module guild
 
 import libs.discord
 
-pub fn (mut h Class_GuildEventHandler) on_interaction_create(interaction discord.InteractionCreateEvent) {
-	command_name := (interaction.full_command_name("-") or { "unknown" })
+pub fn (mut h GuildEventHandler) on_interaction_create(interaction discord.InteractionCreateEvent) {
+	command_name := (interaction.full_command_name('-') or { 'unknown' })
 
-	h.app.log_info("Command executed: " + command_name)
+	h.app.log_info('Command executed: ' + command_name)
 
 	interaction.defer_reply(true) or {
 		h.app.log_error(err.str())
@@ -44,7 +44,7 @@ pub fn (mut h Class_GuildEventHandler) on_interaction_create(interaction discord
 		return
 	}
 
-	interaction.edit_reply("Hello world!") or {
+	interaction.edit_reply('Hello world!') or {
 		h.app.log_error(err.str())
 		return
 	}

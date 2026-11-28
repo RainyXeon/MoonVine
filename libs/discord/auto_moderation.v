@@ -64,28 +64,28 @@ pub mut:
 	exempt_channels  ?[]string
 }
 
-pub struct Class_AutoModeration {
+pub struct AutoModerationClient {
 pub:
 	endpoint string = '/guilds'
 pub mut:
-	bc &Class_BotClient
+	bc &Client
 }
 
-pub fn new_class_auto_moderation(bc &Class_BotClient) &Class_AutoModeration {
-	return &Class_AutoModeration{ bc: bc }
+pub fn new_auto_moderation_client(bc &Client) &AutoModerationClient {
+	return &AutoModerationClient{ bc: bc }
 }
 
-pub fn (this &Class_AutoModeration) fetch_rules(guild_id string) ![]AutoModerationRule {
+pub fn (this &AutoModerationClient) fetch_rules(guild_id string) ![]AutoModerationRule {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/auto-moderation/rules', http.FetchConfig{})!
 	return decode_response_list[AutoModerationRule](res)
 }
 
-pub fn (this &Class_AutoModeration) fetch_rule(guild_id string, rule_id string) !AutoModerationRule {
+pub fn (this &AutoModerationClient) fetch_rule(guild_id string, rule_id string) !AutoModerationRule {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/auto-moderation/rules/${rule_id}', http.FetchConfig{})!
 	return decode_response[AutoModerationRule](res)
 }
 
-pub fn (this &Class_AutoModeration) create_rule(guild_id string, rule CreateAutoModerationRuleParams, reason ?string) !AutoModerationRule {
+pub fn (this &AutoModerationClient) create_rule(guild_id string, rule CreateAutoModerationRuleParams, reason ?string) !AutoModerationRule {
 	mut header := http.new_header()
 	if r := reason {
 		header.add_custom('X-Audit-Log-Reason', r)!
@@ -98,7 +98,7 @@ pub fn (this &Class_AutoModeration) create_rule(guild_id string, rule CreateAuto
 	return decode_response[AutoModerationRule](res)
 }
 
-pub fn (this &Class_AutoModeration) edit_rule(guild_id string, rule_id string, rule ModifyAutoModerationRuleParams, reason ?string) !AutoModerationRule {
+pub fn (this &AutoModerationClient) edit_rule(guild_id string, rule_id string, rule ModifyAutoModerationRuleParams, reason ?string) !AutoModerationRule {
 	mut header := http.new_header()
 	if r := reason {
 		header.add_custom('X-Audit-Log-Reason', r)!
@@ -111,7 +111,7 @@ pub fn (this &Class_AutoModeration) edit_rule(guild_id string, rule_id string, r
 	return decode_response[AutoModerationRule](res)
 }
 
-pub fn (this &Class_AutoModeration) delete_rule(guild_id string, rule_id string) ! {
+pub fn (this &AutoModerationClient) delete_rule(guild_id string, rule_id string) ! {
 	res := this.bc.raw_request(.delete, '${this.endpoint}/${guild_id}/auto-moderation/rules/${rule_id}', http.FetchConfig{})!
 	check_response(res)!
 }

@@ -2,7 +2,7 @@ module discord
 
 pub struct InteractionCreateEvent {
 pub mut:
-	client  ?&Class_BotClient @[skip]
+	client  ?&Client @[skip]
 	message ?Message
 pub:
 	id                             string
@@ -56,7 +56,7 @@ fn (p InteractionReplyPayload) to_callback_data() InteractionCallbackData {
 
 // reply responds immediately (callback type 4: channel_message_with_source).
 pub fn (i &InteractionCreateEvent) reply(payload InteractionReplyPayload) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 4
 		data:          payload.to_callback_data()
@@ -65,7 +65,7 @@ pub fn (i &InteractionCreateEvent) reply(payload InteractionReplyPayload) ! {
 
 // reply_ephemeral responds immediately with an ephemeral message (flags: 64).
 pub fn (i &InteractionCreateEvent) reply_ephemeral(payload InteractionReplyPayload) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	mut data := payload.to_callback_data()
 	data.flags = (data.flags or { 0 }) | 64
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
@@ -76,7 +76,7 @@ pub fn (i &InteractionCreateEvent) reply_ephemeral(payload InteractionReplyPaylo
 
 // defer_reply acknowledges the interaction (callback type 5) so you have 15 minutes to edit_reply().
 pub fn (i &InteractionCreateEvent) defer_reply(ephemeral bool) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 5
 		data:          if ephemeral {
@@ -90,22 +90,22 @@ pub fn (i &InteractionCreateEvent) defer_reply(ephemeral bool) ! {
 }
 
 pub fn (i &InteractionCreateEvent) edit_reply(payload MessageEditPayload) !Message {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	return c.interactions.edit_original_response(i.application_id, i.token, payload.to_params())
 }
 
 pub fn (i &InteractionCreateEvent) delete_reply() ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.delete_original_response(i.application_id, i.token)!
 }
 
 pub fn (i &InteractionCreateEvent) follow_up(payload MessagePayload) !Message {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	return c.interactions.create_followup(i.application_id, i.token, payload.to_params())
 }
 
 pub fn (i &InteractionCreateEvent) update_message(payload InteractionReplyPayload) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 7
 		data:          payload.to_callback_data()
@@ -113,14 +113,14 @@ pub fn (i &InteractionCreateEvent) update_message(payload InteractionReplyPayloa
 }
 
 pub fn (i &InteractionCreateEvent) defer_update() ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 6
 	})!
 }
 
 pub fn (i &InteractionCreateEvent) show_modal(modal InteractionCallbackData) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 9
 		data:          modal
@@ -128,7 +128,7 @@ pub fn (i &InteractionCreateEvent) show_modal(modal InteractionCallbackData) ! {
 }
 
 pub fn (i &InteractionCreateEvent) autocomplete(choices []ApplicationCommandOptionChoice) ! {
-	c := i.client or { return error('InteractionCreateEvent is not bound to a Class_BotClient') }
+	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 8
 		data:          InteractionCallbackData{
@@ -161,64 +161,64 @@ pub fn (i &InteractionCreateEvent) author() ?User {
 }
 
 pub fn (i &InteractionCreateEvent) command_name() ?string {
-  data := i.data or { return none }
-  return data.name
+	data := i.data or { return none }
+	return data.name
 }
 
 pub fn (i &InteractionCreateEvent) subcommand_group_name() ?string {
-  data := i.data or { return none }
-  options := data.options or { return none }
-  for opt in options {
-    if opt.option_type == 2 {
-      return opt.name
-    }
-  }
-  return none
+	data := i.data or { return none }
+	options := data.options or { return none }
+	for opt in options {
+		if opt.option_type == 2 {
+			return opt.name
+		}
+	}
+	return none
 }
 
 pub fn (i &InteractionCreateEvent) subcommand_name() ?string {
-  data := i.data or { return none }
-  options := data.options or { return none }
-  for opt in options {
-    if opt.option_type == 1 {
-      return opt.name
-    }
-    if opt.option_type == 2 {
-      sub_options := opt.options or { continue }
-      for sub_opt in sub_options {
-        if sub_opt.option_type == 1 {
-          return sub_opt.name
-        }
-      }
-    }
-  }
-  return none
+	data := i.data or { return none }
+	options := data.options or { return none }
+	for opt in options {
+		if opt.option_type == 1 {
+			return opt.name
+		}
+		if opt.option_type == 2 {
+			sub_options := opt.options or { continue }
+			for sub_opt in sub_options {
+				if sub_opt.option_type == 1 {
+					return sub_opt.name
+				}
+			}
+		}
+	}
+	return none
 }
 
 // full_command_name returns the space-joined command path (e.g., "config", "config set", or "config roles add").
 pub fn (i &InteractionCreateEvent) full_command_name(join_string string) ?string {
-  cmd := i.command_name() or { return none }
-  mut parts := [cmd]
-  if group := i.subcommand_group_name() {
-    parts << group
-  }
-  if sub := i.subcommand_name() {
-    parts << sub
-  }
-  return parts.join(join_string)
+	cmd := i.command_name() or { return none }
+	mut parts := [cmd]
+	if group := i.subcommand_group_name() {
+		parts << group
+	}
+	if sub := i.subcommand_name() {
+		parts << sub
+	}
+	return parts.join(join_string)
 }
 
 // resolved_options unwraps any subcommand group / subcommand wrapper and returns the leaf arguments.
 pub fn (i &InteractionCreateEvent) resolved_options() []InteractionDataOption {
-  data := i.data or { return [] }
-  mut opts := data.options or { return [] }
-  if opts.len > 0 && opts[0].option_type == 2 {
-    opts = opts[0].options or { return [] }
-  }
-  if opts.len > 0 && opts[0].option_type == 1 {
-    opts = opts[0].options or { return [] }
-  }
-  return opts
+	data := i.data or { return [] }
+	mut opts := data.options or { return [] }
+	if opts.len > 0 && opts[0].option_type == 2 {
+		opts = opts[0].options or { return [] }
+	}
+	if opts.len > 0 && opts[0].option_type == 1 {
+		opts = opts[0].options or { return [] }
+	}
+	return opts
 }
 
 pub struct IntegrationCreateUpdateEvent {
