@@ -8,6 +8,8 @@ pub mut:
 }
 
 pub fn register(mut app context.App) {
+		app.log_info('[Event Register] Register [client] events.')
+
 	mut handler := &ClientEventHandler{
 		app: app
 	}

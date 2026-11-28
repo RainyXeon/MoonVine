@@ -442,6 +442,12 @@ pub fn (this &GuildClient) fetch_roles(guild_id string) ![]Role {
 	return decode_response_list[Role](res)
 }
 
+pub fn (this &GuildClient) fetch_role(guild_id string, role_id string) !Role {
+	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/role/${role_id}', http.FetchConfig{})!
+	return decode_response[Role](res)
+}
+
+
 pub fn (this &GuildClient) fetch_audit_log(guild_id string, params AuditLogQueryParams) !AuditLog {
 	res := this.bc.raw_request(.get, '${this.endpoint}/${guild_id}/audit-logs${params.query()}', http.FetchConfig{})!
 	return decode_response[AuditLog](res)

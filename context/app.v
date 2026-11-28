@@ -10,8 +10,14 @@ pub struct App {
 pub:
 	client    &discord.Client = unsafe { nil }
 	configs   configs.Config
-	log       &log.ThreadSafeLog = log.new_thread_safe_log()
+	log       &log.ThreadSafeLog = log.new_thread_safe_log() 
 	stopwatch time.StopWatch
+pub mut:
+	commands map[string]Command = map[string]Command{}
+}
+
+pub fn (mut app App) add_command(command_name string, command Command) {
+	app.commands[command_name] = command
 }
 
 pub fn (mut app App) log_debug(msg string) {

@@ -13,7 +13,7 @@ THIS DISCORD MUSIC BOT IS UNDER VERY HEAVY DEVELOPMENT!!
 ### Compile
 
 ```sh
-v -prod -v -showcc -keepc -prod -cflags "-O3 -march=native -mtune=native" .
+v -prod -v -cc gcc -showcc -keepc -prod -cflags "-O3 -march=native -mtune=native" .
 ```
 
 ### Test run

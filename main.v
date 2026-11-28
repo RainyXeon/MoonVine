@@ -6,6 +6,7 @@ import libs.discord
 import configs
 import log
 import time
+import commands
 
 pub fn main() {
 	// INFO: Setting up stop watch for speed measurement
@@ -32,6 +33,9 @@ pub fn main() {
 	// INFO: Setting up client
 	app.log_info('Booting application...')
 	app.client.intents(discord.GatewayIntent.default_with(.guilds, .guild_messages, .message_content))
+
+	// INFO: Register commands
+	commands.register_commands(mut app)
 
 	// INFO: Setting up events
 	events.register(mut app)

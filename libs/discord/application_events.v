@@ -39,34 +39,19 @@ pub:
 	permission bool
 }
 
-pub type InteractionReplyPayload = string | InteractionCallbackData
-
-fn (p InteractionReplyPayload) to_callback_data() InteractionCallbackData {
-	return match p {
-		string {
-			InteractionCallbackData{
-				content: p
-			}
-		}
-		InteractionCallbackData {
-			p
-		}
-	}
-}
-
 // reply responds immediately (callback type 4: channel_message_with_source).
-pub fn (i &InteractionCreateEvent) reply(payload InteractionReplyPayload) ! {
+pub fn (i &InteractionCreateEvent) reply(payload MessagePayload) ! {
 	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 4
-		data:          payload.to_callback_data()
+		data:          payload.to_params()
 	})!
 }
 
 // reply_ephemeral responds immediately with an ephemeral message (flags: 64).
-pub fn (i &InteractionCreateEvent) reply_ephemeral(payload InteractionReplyPayload) ! {
+pub fn (i &InteractionCreateEvent) reply_ephemeral(payload MessagePayload) ! {
 	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
-	mut data := payload.to_callback_data()
+	mut data := payload.to_params()
 	data.flags = (data.flags or { 0 }) | 64
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 4
@@ -80,7 +65,7 @@ pub fn (i &InteractionCreateEvent) defer_reply(ephemeral bool) ! {
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 5
 		data:          if ephemeral {
-			InteractionCallbackData{
+			CreateMessageParams{
 				flags: 64
 			}
 		} else {
@@ -104,11 +89,11 @@ pub fn (i &InteractionCreateEvent) follow_up(payload MessagePayload) !Message {
 	return c.interactions.create_followup(i.application_id, i.token, payload.to_params())
 }
 
-pub fn (i &InteractionCreateEvent) update_message(payload InteractionReplyPayload) ! {
+pub fn (i &InteractionCreateEvent) update_message(payload MessagePayload) ! {
 	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 7
-		data:          payload.to_callback_data()
+		data:          payload.to_params()
 	})!
 }
 
@@ -119,7 +104,7 @@ pub fn (i &InteractionCreateEvent) defer_update() ! {
 	})!
 }
 
-pub fn (i &InteractionCreateEvent) show_modal(modal InteractionCallbackData) ! {
+pub fn (i &InteractionCreateEvent) show_modal(modal CreateMessageParams) ! {
 	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 9
@@ -131,7 +116,7 @@ pub fn (i &InteractionCreateEvent) autocomplete(choices []ApplicationCommandOpti
 	c := i.client or { return error('InteractionCreateEvent is not bound to a Client') }
 	c.interactions.create_response(i.id, i.token, InteractionResponse{
 		response_type: 8
-		data:          InteractionCallbackData{
+		data:          CreateMessageParams{
 			choices: choices
 		}
 	})!

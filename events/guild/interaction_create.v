@@ -1,51 +1,29 @@
 module guild
 
 import libs.discord
+import context
 
 pub fn (mut h GuildEventHandler) on_interaction_create(interaction discord.InteractionCreateEvent) {
+	if !interaction.is_command() { return }
+
 	command_name := (interaction.full_command_name('-') or { 'unknown' })
 
-	h.app.log_info('Command executed: ' + command_name)
+	if command_name !in h.app.commands {
+		return
+	}
 
-	interaction.defer_reply(true) or {
+	mut command := h.app.commands[command_name]
+
+	mut invocation := context.CommandInvocation.from_interaction(
+		h.app.client, interaction, "en", command_prefix, [],
+	) or {
 		h.app.log_error(err.str())
 		return
 	}
 
-	if command_name == 'ping' {
-		ws_ping := h.app.client.gateway.ping()
-
-		text := if ws_ping >= 0 {
-			'${ws_ping}'
-		} else {
-			'(awaiting first heartbeat ACK)'
-		}
-
-		user := h.app.client.users.me.fetch() or {
-			h.app.log_error(err.str())
-			return
-		}
-
-		interaction.edit_reply(discord.EditMessageParams{
-			content: ''
-			embeds:  [
-				discord.Embed{
-					author:      discord.EmbedAuthor{
-						name: '🏓 ' + user.username
-					}
-					description: '**Ping:** `${text}ms`'
-				},
-			]
-		}) or {
-			h.app.log_error(err.str())
-			return
-		}
-
-		return
-	}
-
-	interaction.edit_reply('Hello world!') or {
+	command.execute(mut h.app, mut invocation) or {
+		h.app.log_error("Failed to execute command: ${command.name.join("-")}")
 		h.app.log_error(err.str())
 		return
-	}
+	} 
 }

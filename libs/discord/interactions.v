@@ -18,6 +18,20 @@ pub:
 	components     ?[]MessageComponent
 }
 
+pub enum ApplicationCommandOptionType {
+	sub_command       = 1
+	sub_command_group = 2
+	string            = 3
+	integer           = 4
+	boolean           = 5
+	user              = 6
+	channel           = 7
+	role              = 8
+	mentionable       = 9
+	number            = 10
+	attachment        = 11
+}
+
 pub struct InteractionDataOption {
 pub:
 	name        string
@@ -30,22 +44,7 @@ pub:
 pub struct InteractionResponse {
 pub mut:
 	response_type int @[json: 'type']
-	data          ?InteractionCallbackData
-}
-
-pub struct InteractionCallbackData {
-pub mut:
-	tts              ?bool
-	content          ?string
-	embeds           ?[]Embed
-	allowed_mentions ?AllowedMentions
-	flags            ?int
-	components       ?[]MessageComponent
-	attachments      ?[]PartialAttachment
-	choices          ?[]ApplicationCommandOptionChoice
-	custom_id        ?string
-	title            ?string
-	poll             ?Poll
+	data          ?CreateMessageParams
 }
 
 pub struct ApplicationCommandCreateParams {

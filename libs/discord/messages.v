@@ -255,18 +255,26 @@ pub fn (params MessageQueryParams) query() string {
 
 pub struct CreateMessageParams {
 pub mut:
-	content           ?string
-	nonce             ?string
-	tts               ?bool
-	embeds            ?[]Embed
-	allowed_mentions  ?AllowedMentions
-	message_reference ?MessageReference
-	components        ?[]MessageComponent
-	sticker_ids       ?[]string
-	attachments       ?[]PartialAttachment
-	flags             ?int
-	enforce_nonce     ?bool
-	poll              ?Poll
+  // Shared message & interaction response fields
+  content           ?string
+  tts               ?bool
+  embeds            ?[]Embed
+  allowed_mentions  ?AllowedMentions
+  components        ?[]MessageComponent
+  attachments       ?[]PartialAttachment
+  flags             ?int
+  poll              ?Poll
+
+  // Channel message-specific fields
+  nonce             ?string
+  message_reference ?MessageReference
+  sticker_ids       ?[]string
+  enforce_nonce     ?bool
+
+  // Interaction callback-specific fields (Autocomplete & Modal)
+  choices           ?[]ApplicationCommandOptionChoice
+  custom_id         ?string
+  title             ?string
 }
 
 pub struct EditMessageParams {

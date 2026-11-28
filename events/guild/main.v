@@ -7,7 +7,10 @@ pub mut:
 	app &context.App
 }
 
+const command_prefix = "!"
+
 pub fn register(mut app context.App) {
+	app.log_info('[Event Register] Register [guild] events.')
 	mut handler := &GuildEventHandler{
 		app: app
 	}
